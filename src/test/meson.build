@@ -1,14 +1,16 @@
-project('hystogram-equalizer-sequential', 'c',
+project('hystogram-equalizer-test', 'c',
   version : '0.1',
   default_options : ['warning_level=3'])
 
-incdir = include_directories('../common')
+incdir = include_directories('../common', 'Unity/src')
 
-sources = ['main.c', '../common/hsl.c']
+sources = ['test.c',
+           'Unity/src/unity.c',
+           '../common/hsl.c']
 
 # add_global_arguments('-DTRACE=1', language : 'c')
 
-executable('hystogram-equalizer-sequential',
+executable('hystogram-equalizer-test',
            [sources],
            install : true,
            include_directories : incdir,

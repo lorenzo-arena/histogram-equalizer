@@ -1,0 +1,12 @@
+{
+    "tasks": [
+        {
+            "label": "Build test suite",
+            "type": "shell",
+            "command": "cd src/test && meson builddir && meson compile -C builddir",
+            "problemMatcher": [],
+            "group": "build"
+        }
+    ],
+    "version": "2.0.0"
+}

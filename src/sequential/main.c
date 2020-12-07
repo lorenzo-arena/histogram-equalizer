@@ -2,7 +2,9 @@
 #include <stdio.h>
 
 #define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
+#include "stb_image.h"
+
+#include "hsl.h"
 
 int main(int argc, char **argv) {
     int width, height, bpp;

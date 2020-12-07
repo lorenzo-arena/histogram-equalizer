@@ -1,0 +1,31 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Build and debug test suite",
+            "type": "cppdbg",
+            "request": "launch",
+            //"program": "${workspaceFolder}/src/parallel/builddir/des-finder-parallel",
+            //"args": ["saLpqprs6OBGs", "sa", "-t", "8"],
+            "program": "${workspaceFolder}/src/test/builddir/hystogram-equalizer-test",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/src/test/builddir",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "Build test suite",
+            "miDebuggerPath": "/usr/bin/gdb"
+        }
+    ]
+}
