@@ -280,4 +280,121 @@ void test_hsl_to_rgb(void)
     TEST_ASSERT_EQUAL_UINT8(169, rgb.b);
 }
 
+void test_rgb_to_h(void)
+{
+    TEST_MESSAGE("Starting RGB to H test..");
+
+    // Test for red
+    int hue = 0;
+    rgb_pixel rgb_red = {
+        .r = 255,
+        .g = 0,
+        .b = 0
+    };
+    hue = 0;
+    hue = rgb_to_h(rgb_red);
+
+    TEST_MESSAGE("Testing RGB to H for red..");
+    TEST_ASSERT_EQUAL_INT32(0, hue);
+
+    rgb_pixel rgb_green = {
+        .r = 0,
+        .g = 255,
+        .b = 0
+    };
+    hue = 0;
+    hue = rgb_to_h(rgb_green);
+
+    TEST_MESSAGE("Testing RGB to H for green..");
+    TEST_ASSERT_EQUAL_INT32(120, hue);
+
+    rgb_pixel rgb_blue = {
+        .r = 0,
+        .g = 0,
+        .b = 255
+    };
+    hue = 0;
+    hue = rgb_to_h(rgb_blue);
+
+    TEST_MESSAGE("Testing RGB to H for blue..");
+    TEST_ASSERT_EQUAL_INT32(240, hue);
+
+    rgb_pixel rgb_aqua = {
+        .r = 0,
+        .g = 255,
+        .b = 255
+    };
+    hue = 0;
+    hue = rgb_to_h(rgb_aqua);
+
+    TEST_MESSAGE("Testing RGB to H for aqua..");
+    TEST_ASSERT_EQUAL_INT32(180, hue);
+
+    rgb_pixel rgb_turquoise = {
+        .r = 64,
+        .g = 224,
+        .b = 208
+    };
+    hue = 0;
+    hue = rgb_to_h(rgb_turquoise);
+
+    TEST_MESSAGE("Testing RGB to H for turquoise..");
+    TEST_ASSERT_EQUAL_INT32(174, hue);
+
+    rgb_pixel rgb_moccasin = {
+        .r = 255,
+        .g = 228,
+        .b = 181
+    };
+    hue = 0;
+    hue = rgb_to_h(rgb_moccasin);
+
+    TEST_MESSAGE("Testing RGB to H for moccasin..");
+    TEST_ASSERT_EQUAL_INT32(38, hue);
+
+    rgb_pixel rgb_blueviolet = {
+        .r = 138,
+        .g = 43,
+        .b = 226
+    };
+    hue = 0;
+    hue = rgb_to_h(rgb_blueviolet);
+
+    TEST_MESSAGE("Testing RGB to H for blueviolet..");
+    TEST_ASSERT_EQUAL_INT32(271, hue);
+
+    rgb_pixel rgb_mintcream = {
+        .r = 245,
+        .g = 255,
+        .b = 250
+    };
+    hue = 0;
+    hue = rgb_to_h(rgb_mintcream);
+
+    TEST_MESSAGE("Testing RGB to H for mintcream..");
+    TEST_ASSERT_EQUAL_INT32(150, hue);
+
+    rgb_pixel rgb_darkslategray = {
+        .r = 47,
+        .g = 79,
+        .b = 79
+    };
+    hue = 0;
+    hue = rgb_to_h(rgb_darkslategray);
+
+    TEST_MESSAGE("Testing RGB to H for darkslategray..");
+    TEST_ASSERT_EQUAL_INT32(180, hue);
+
+    rgb_pixel rgb_darkgray = {
+        .r = 169,
+        .g = 169,
+        .b = 169
+    };
+    hue = 0;
+    hue = rgb_to_h(rgb_darkgray);
+
+    TEST_MESSAGE("Testing RGB to H for darkgray..");
+    TEST_ASSERT_EQUAL_INT32(0, hue);
+}
+
 #endif

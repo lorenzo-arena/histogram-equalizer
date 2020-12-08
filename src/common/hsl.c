@@ -54,6 +54,90 @@ void rgb_to_hsl(rgb_pixel rgb, hsl_pixel* hsl)
     }
 }
 
+int rgb_to_h(rgb_pixel rgb)
+{
+    float scaled_r = (float)(rgb.r) / 255;
+    float scaled_g = (float)(rgb.g) / 255;
+    float scaled_b = (float)(rgb.b) / 255;
+
+    // 1. Calculate the min and max and mean to get the luminance
+    float min = min_f(min_f(scaled_r, scaled_g), scaled_b);
+    float max = max_f(max_f(scaled_r, scaled_g), scaled_b);
+
+    float chroma = max - min;
+
+    // 2. If min and max are equal, we have a shade of gray and hue and saturation are 0;
+    // otherwise they must be calculated
+    if(min == max)
+    {
+        return 0;
+    }
+    else
+    {
+        float hue = 0.0;
+        if(max == scaled_r)
+        {
+            hue = 60 * ((scaled_g - scaled_b) / chroma);
+        }
+        else if(max == scaled_g)
+        {
+            hue = 60 * (2 + ((scaled_b - scaled_r) / chroma));
+        }
+        else
+        {
+            hue = 60 * (4 + ((scaled_r - scaled_g) / chroma));
+        }
+
+        if(hue < 0)
+        {
+            hue += 360;
+        }
+        else if(hue > 360)
+        {
+            hue -= 360;
+        }
+
+        return (int)hue;
+    }
+}
+
+float rgb_to_s(rgb_pixel rgb)
+{
+    float scaled_r = (float)(rgb.r) / 255;
+    float scaled_g = (float)(rgb.g) / 255;
+    float scaled_b = (float)(rgb.b) / 255;
+
+    // 1. Calculate the min and max and mean to get the luminance
+    float min = min_f(min_f(scaled_r, scaled_g), scaled_b);
+    float max = max_f(max_f(scaled_r, scaled_g), scaled_b);
+
+    float chroma = max - min;
+
+    // 2. If min and max are equal, we have a shade of gray and hue and saturation are 0;
+    // otherwise they must be calculated
+    if(min == max)
+    {
+        return 0;
+    }
+    else
+    {
+        return chroma / (1 - fabs((2 * max) - chroma -1));
+    }
+}
+
+float rgb_to_l(rgb_pixel rgb)
+{
+    float scaled_r = (float)(rgb.r) / 255;
+    float scaled_g = (float)(rgb.g) / 255;
+    float scaled_b = (float)(rgb.b) / 255;
+
+    // 1. Calculate the min and max and mean to get the luminance
+    float min = min_f(min_f(scaled_r, scaled_g), scaled_b);
+    float max = max_f(max_f(scaled_r, scaled_g), scaled_b);
+
+    return (min + max) / 2;
+}
+
 void hsl_to_rgb(hsl_pixel hsl, rgb_pixel *rgb)
 {
     // 1. If saturation is zero we have a shade of gray
