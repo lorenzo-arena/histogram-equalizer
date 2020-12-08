@@ -10,7 +10,7 @@
             "request": "launch",
             //"program": "${workspaceFolder}/src/parallel/builddir/des-finder-parallel",
             //"args": ["saLpqprs6OBGs", "sa", "-t", "8"],
-            "program": "${workspaceFolder}/src/test/builddir/hystogram-equalizer-test",
+            "program": "${workspaceFolder}/src/test/builddir/histogram-equalizer-test",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/src/test/builddir",

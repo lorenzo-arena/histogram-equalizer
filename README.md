@@ -1,10 +1,10 @@
-## Hystogram equalizer project
+## Histogram equalizer project
 
 This project was made for the "parallel computing" course at the Computer Engineering University of Florence.
 
 ### Goal
 
-The main goal is to write two version of the same program which must compute the hystogram of an image an perform an hystogram equalization.
+The main goal is to write two version of the same program which must compute the histogram of an image an perform an histogram equalization.
 
 ### Requirements
 

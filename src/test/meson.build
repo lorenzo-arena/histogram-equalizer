@@ -1,4 +1,4 @@
-project('hystogram-equalizer-test', 'c',
+project('histogram-equalizer-test', 'c',
   version : '0.1',
   default_options : ['warning_level=3'])
 
@@ -10,7 +10,7 @@ sources = ['test.c',
 
 # add_global_arguments('-DTRACE=1', language : 'c')
 
-executable('hystogram-equalizer-test',
+executable('histogram-equalizer-test',
            [sources],
            install : true,
            include_directories : incdir,
