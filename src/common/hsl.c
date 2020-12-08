@@ -5,7 +5,7 @@
 
 #define LUMINANCE_THRESHOLD (0.5)
 
-void rgb_to_hsl(rgb_pixel rgb, hsl_pixel* hsl)
+void rgb_to_hsl(rgb_pixel_t rgb, hsl_pixel_t* hsl)
 {
     float scaled_r = (float)(rgb.r) / 255;
     float scaled_g = (float)(rgb.g) / 255;
@@ -54,7 +54,7 @@ void rgb_to_hsl(rgb_pixel rgb, hsl_pixel* hsl)
     }
 }
 
-int rgb_to_h(rgb_pixel rgb)
+int rgb_to_h(rgb_pixel_t rgb)
 {
     float scaled_r = (float)(rgb.r) / 255;
     float scaled_g = (float)(rgb.g) / 255;
@@ -101,7 +101,7 @@ int rgb_to_h(rgb_pixel rgb)
     }
 }
 
-float rgb_to_s(rgb_pixel rgb)
+float rgb_to_s(rgb_pixel_t rgb)
 {
     float scaled_r = (float)(rgb.r) / 255;
     float scaled_g = (float)(rgb.g) / 255;
@@ -125,7 +125,7 @@ float rgb_to_s(rgb_pixel rgb)
     }
 }
 
-float rgb_to_l(rgb_pixel rgb)
+float rgb_to_l(rgb_pixel_t rgb)
 {
     float scaled_r = (float)(rgb.r) / 255;
     float scaled_g = (float)(rgb.g) / 255;
@@ -138,7 +138,7 @@ float rgb_to_l(rgb_pixel rgb)
     return (min + max) / 2;
 }
 
-void hsl_to_rgb(hsl_pixel hsl, rgb_pixel *rgb)
+void hsl_to_rgb(hsl_pixel_t hsl, rgb_pixel_t *rgb)
 {
     // 1. If saturation is zero we have a shade of gray
     if(hsl.s == 0)

@@ -5,29 +5,29 @@ typedef struct {
     int *h;
     float *s;
     float *l;
-} hsl_image;
+} hsl_image_t;
 
 typedef struct {
     int h;
     float s;
     float l;
-} hsl_pixel;
+} hsl_pixel_t;
 
 typedef struct {
     unsigned char r;
     unsigned char g;
     unsigned char b;
     unsigned char dummy;
-} rgb_pixel;
+} rgb_pixel_t;
 
-void rgb_to_hsl(rgb_pixel rgb, hsl_pixel* hsl);
+void rgb_to_hsl(rgb_pixel_t rgb, hsl_pixel_t* hsl);
 
-int rgb_to_h(rgb_pixel rgb);
+int rgb_to_h(rgb_pixel_t rgb);
 
-float rgb_to_s(rgb_pixel rgb);
+float rgb_to_s(rgb_pixel_t rgb);
 
-float rgb_to_l(rgb_pixel rgb);
+float rgb_to_l(rgb_pixel_t rgb);
 
-void hsl_to_rgb(hsl_pixel hsl, rgb_pixel *rgb);
+void hsl_to_rgb(hsl_pixel_t hsl, rgb_pixel_t *rgb);
 
 #endif
