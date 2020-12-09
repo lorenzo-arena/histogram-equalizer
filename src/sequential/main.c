@@ -1,7 +1,9 @@
 #include <stdint.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <assert.h>
 #include <math.h>
+#include <argp.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -13,6 +15,87 @@
 #include "stopwatch.h"
 
 #define N_BINS 500
+
+const char *argp_program_version =
+" 1.0";
+
+struct arguments
+{
+    char *args[2];                /* image and output */
+    bool stopwatch;
+    bool plot;
+    bool log_histogram;
+};
+
+void set_default_arguments(struct arguments *arguments)
+{
+    arguments->args[0] = "";
+    arguments->args[1] = "";
+    arguments->stopwatch = false;
+    arguments->plot = false;
+    arguments->log_histogram = false;
+}
+
+static struct argp_option options[] =
+{
+    {"stopwatch", 's', 0, 0, "Enable stopwatch usage", 0},
+    {"plot", 'p', 0, 0, "Enable histogram plot", 0},
+    {"log_histogram", 'l', 0, 0, "Enable histogram log", 0},
+    {0}
+};
+
+static error_t parse_opt (int key, char *arg, struct argp_state *state)
+{
+    struct arguments *arguments = state->input;
+
+    switch (key)
+    {
+        case 's':
+        {
+            arguments->stopwatch = true;
+            break;
+        }
+        case 'p':
+        {
+            arguments->plot = true;
+            break;
+        }
+        case 'l':
+        {
+            arguments->log_histogram = true;
+            break;
+        }
+        case ARGP_KEY_ARG:
+        {
+            if (state->arg_num >= 2)
+            {
+                argp_usage(state);
+            }
+            arguments->args[state->arg_num] = arg;
+            break;
+        }
+        case ARGP_KEY_END:
+        {
+            if (state->arg_num < 2)
+            {
+                argp_usage(state);
+            }
+            break;
+        }
+        default:
+        return ARGP_ERR_UNKNOWN;
+    }
+
+    return 0;
+}
+
+static char args_doc[] = "image output";
+
+static char doc[] =
+"histogram-equalizer-sequential -- Used to equalize the histogram of an image.";
+
+static struct argp argp = {options, parse_opt, args_doc, doc, NULL, NULL, NULL};
+
 
 void histogram_calc(unsigned int *hist, float *lum, size_t img_size)
 {
@@ -40,16 +123,18 @@ void cdf_calc(unsigned int *cdf, unsigned int *buf, size_t buf_size)
 int main(int argc, char **argv)
 {
     int width, height, bpp;
+    struct arguments arguments;
 
-    stopwatch_start();
+    set_default_arguments(&arguments);
 
-    if(argc <= 1)
+    argp_parse(&argp, argc, argv, 0, 0, &arguments);
+
+    if(arguments.stopwatch)
     {
-        log_error("Usage: %s <image-path>\n", argv[0]);
-        return 1;
+        stopwatch_start();
     }
 
-    uint8_t* rgb_image = stbi_load(argv[1], &width, &height, &bpp, STBI_rgb);
+    uint8_t* rgb_image = stbi_load(arguments.args[0], &width, &height, &bpp, STBI_rgb);
 
     log_info("Width %d", width);
     log_info("Height %d", height);
@@ -147,37 +232,41 @@ int main(int argc, char **argv)
         }
     }
 
-    stbi_write_jpg("test.jpg", width, height, STBI_rgb, rgb_image, 100);
+    stbi_write_jpg(arguments.args[1], width, height, STBI_rgb, rgb_image, 100);
 
-    // TODO: add an option for print
-    log_info("Printing histogram..");
-    for(int bin = 0; bin < N_BINS; bin++)
+    if(arguments.log_histogram)
     {
-        log_info("%d:%d", bin, histogram[bin]);
+        log_info("Printing histogram..");
+        for(int bin = 0; bin < N_BINS; bin++)
+        {
+            log_info("%d:%d", bin, histogram[bin]);
+        }
+
+        log_info("Printing cdf..");
+        for(int bin = 0; bin < (N_BINS - 1); bin++)
+        {
+            log_info("%d:%d", bin, cdf[bin]);
+        }
+
+        log_info("Printing normalized cdf..");
+        for(int bin = 0; bin < (N_BINS - 1); bin++)
+        {
+            log_info("%d:%g", bin, cdf_norm[bin]);
+        }
     }
 
-    log_info("Printing cdf..");
-    for(int bin = 0; bin < (N_BINS - 1); bin++)
+    if(arguments.plot)
     {
-        log_info("%d:%d", bin, cdf[bin]);
+        FILE *gnuplot = popen("gnuplot -persistent", "w");
+        fprintf(gnuplot, "plot '-'\n");
+        for (int bin = 1; bin < N_BINS; bin++)
+        {
+            fprintf(gnuplot, "%d %d\n", bin, histogram[bin]);
+        }
+        fprintf(gnuplot, "e\n");
+        fprintf(gnuplot,"set xrange[1:%d]\n", N_BINS);
+        fflush(gnuplot);
     }
-
-    log_info("Printing normalized cdf..");
-    for(int bin = 0; bin < (N_BINS - 1); bin++)
-    {
-        log_info("%d:%g", bin, cdf_norm[bin]);
-    }
-
-    // TODO: add an option for plot
-    FILE *gnuplot = popen("gnuplot -persistent", "w");
-    fprintf(gnuplot, "plot '-'\n");
-    for (int bin = 1; bin < N_BINS; bin++)
-    {
-        fprintf(gnuplot, "%d %d\n", bin, histogram[bin]);
-    }
-    fprintf(gnuplot, "e\n");
-    fprintf(gnuplot,"set xrange[1:%d]\n", N_BINS);
-    fflush(gnuplot);
 
     // Clean up buffers
     stbi_image_free(rgb_image);
@@ -189,13 +278,16 @@ int main(int argc, char **argv)
     free(cdf);
     free(cdf_norm);
 
-    stopwatch_stop();
+    if(arguments.stopwatch)
+    {
+        stopwatch_stop();
 
-    struct timespec elapsed = stopwatch_get_elapsed();
+        struct timespec elapsed = stopwatch_get_elapsed();
 
-    log_info("Elapsed time: %ld.%09ld",
-        elapsed.tv_sec,
-        elapsed.tv_nsec);
+        log_info("Elapsed time: %ld.%09ld",
+            elapsed.tv_sec,
+            elapsed.tv_nsec);
+    }
 
     return 0;
 }
