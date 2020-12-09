@@ -186,6 +186,8 @@ int main(int argc, char **argv)
     free(hsl_image.s);
     free(hsl_image.l);
     free(histogram);
+    free(cdf);
+    free(cdf_norm);
 
     stopwatch_stop();
 
