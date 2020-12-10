@@ -152,9 +152,9 @@ int main(int argc, char **argv)
     assert(hsl_image.s != NULL);
     assert(hsl_image.l != NULL);
 
-    for(int x = 0; x < width; x++)
+    for(int x = 0; x < height; x++)
     {
-        for(int y = 0; y < height; y++)
+        for(int y = 0; y < width; y++)
         {
             unsigned char* pixel_offset = rgb_image + (((width * x) + y) * STBI_rgb);
             
@@ -184,35 +184,35 @@ int main(int argc, char **argv)
     // all calculations on the histogram must exclude the extremes
 
     // Calculate the cdf
-    unsigned int *cdf = calloc(N_BINS - 1, sizeof(unsigned int));
+    unsigned int *cdf = calloc(N_BINS, sizeof(unsigned int));
     log_info("Starting cdf calculation..");
-    cdf_calc(cdf, &histogram[1], N_BINS - 1);
+    cdf_calc(cdf, histogram, N_BINS);
 
     // Normalize the cdf so that it can be used as luminance
-    float *cdf_norm = calloc(N_BINS - 1, sizeof(float));
+    float *cdf_norm = calloc(N_BINS, sizeof(float));
     log_info("Starting normalized cdf calculation..");
-    for(int bin = 0; bin < (N_BINS - 2); bin++)
+    for(int bin = 0; bin < N_BINS; bin++)
     {
         float temp = (float)(cdf[bin] - cdf[0]);
-        float temp2 = (float)(cdf[N_BINS - 2] - cdf[0]);
+        float temp2 = (float)(cdf[N_BINS - 1] - cdf[0]);
         float temp3 = (float)(N_BINS - 1);
         cdf_norm[bin] = (float)(temp) / temp2;
         //cdf_norm[bin] = (unsigned int)round(((float)(cdf[bin] - cdf[0]) / (float)(cdf[N_BINS - 2] - cdf[0])) * (float)(N_BINS - 1));
     }
 
     // Apply the normalized cdf to the luminance
-    for(int x = 0; x < width; x++)
+    for(int x = 0; x < height; x++)
     {
-        for(int y = 0; y < height; y++)
+        for(int y = 0; y < width; y++)
         {
             hsl_image.l[(width * x) + y] = cdf_norm[(int)round(hsl_image.l[(width * x) + y] * N_BINS)];
         }
     }
 
     // Convert back to rgb and save the image
-    for(int x = 0; x < width; x++)
+    for(int x = 0; x < height; x++)
     {
-        for(int y = 0; y < height; y++)
+        for(int y = 0; y < width; y++)
         {
             unsigned char* pixel_offset = rgb_image + (((width * x) + y) * STBI_rgb);
 
