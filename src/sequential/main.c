@@ -104,16 +104,9 @@ void histogram_calc(unsigned int *hist, float *lum, size_t img_size)
 
     for(unsigned int index = 0; index < img_size; index++)
     {
-        // Check the luminance value since 1.0 or higher would cause overflow
-        if(lum[index] < 1.0)
-        {
-            hist[(int)floorf(lum[index] * N_BINS)]++;
-        }
-        else
-        {
-            hist[N_BINS - 1]++;
-        }
-        
+        // The luminance should be between 0 and 1; multiply by
+	// N_BINS - 1 so that it can't cause overflow
+        hist[(int)floorf(lum[index] * (N_BINS - 1))]++;
     }
 }
 
@@ -177,20 +170,16 @@ int main(int argc, char **argv)
 
             rgb_to_hsl(rgb_pixel, &hsl_pixel);
 
-            //log_info("Calculating HSL for x %d, y %d", x, y);
             hsl_image.h[(width * x) + y] = hsl_pixel.h;
             hsl_image.s[(width * x) + y] = hsl_pixel.s;
             hsl_image.l[(width * x) + y] = hsl_pixel.l;
         }
     }
 
-    // Calculate the histogram by multiplying the luminance by 1000
+    // Calculate the histogram by multiplying the luminance by N_BINS - 1
     unsigned int *histogram = calloc(N_BINS, sizeof(unsigned int));
     log_info("Starting histogram calculation..");
     histogram_calc(histogram, hsl_image.l, width * height);
-
-    // Important: since it can be that a lot of pixel are black or white,
-    // all calculations on the histogram must exclude the extremes
 
     // Calculate the cdf
     unsigned int *cdf = calloc(N_BINS, sizeof(unsigned int));
@@ -202,11 +191,7 @@ int main(int argc, char **argv)
     log_info("Starting normalized cdf calculation..");
     for(int bin = 0; bin < N_BINS; bin++)
     {
-        float temp = (float)(cdf[bin] - cdf[0]);
-        float temp2 = (float)(cdf[N_BINS - 1] - cdf[0]);
-        float temp3 = (float)(N_BINS - 1);
-        cdf_norm[bin] = (float)(temp) / temp2;
-        //cdf_norm[bin] = (unsigned int)floorf(((float)(cdf[bin] - cdf[0]) / (float)(cdf[N_BINS - 2] - cdf[0])) * (float)(N_BINS - 1));
+        cdf_norm[bin] = (float)(cdf[bin]) / (width * height);
     }
 
     // Apply the normalized cdf to the luminance
@@ -214,11 +199,8 @@ int main(int argc, char **argv)
     {
         for(int y = 0; y < width; y++)
         {
-            // Check the luminance value since 1.0 or higher would cause overflow
-            if(hsl_image.l[(width * x) + y] < 1.0)
-            {
-                hsl_image.l[(width * x) + y] = cdf_norm[(int)floorf(hsl_image.l[(width * x) + y] * N_BINS)];
-            }
+	    // Multiply by N_BINS - 1 to prevent overflow
+            hsl_image.l[(width * x) + y] = cdf_norm[(int)floorf(hsl_image.l[(width * x) + y] * (N_BINS - 1))];
         }
     }
 
