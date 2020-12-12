@@ -252,15 +252,30 @@ int main(int argc, char **argv)
 
     if(arguments.plot)
     {
+        // Compute the post processed image histogram
+        unsigned int *pp_histogram = calloc(N_BINS, sizeof(unsigned int));
+        log_info("Starting post processed histogram calculation..");
+        histogram_calc(pp_histogram, hsl_image.l, width * height);
+
         FILE *gnuplot = popen("gnuplot -persistent", "w");
-        fprintf(gnuplot, "plot '-'\n");
-        for (int bin = 1; bin < N_BINS; bin++)
+        fprintf(gnuplot, "set style line 1 lc rgb '#0025ad' lt 1 lw 0.75\n");
+        fprintf(gnuplot, "set style line 2 lc rgb '#ad2500' lt 1 lw 0.75\n");
+        fprintf(gnuplot, "plot '-' with lines ls 1 title 'Image histogram',\\\n");
+        fprintf(gnuplot, "'-' with lines ls 2 title 'Post-processed image histogram'\n");
+        for (int bin = 0; bin < N_BINS; bin++)
         {
             fprintf(gnuplot, "%d %d\n", bin, histogram[bin]);
         }
         fprintf(gnuplot, "e\n");
-        fprintf(gnuplot,"set xrange[1:%d]\n", N_BINS);
+        for (int bin = 0; bin < N_BINS; bin++)
+        {
+            fprintf(gnuplot, "%d %d\n", bin, pp_histogram[bin]);
+        }
+        fprintf(gnuplot, "e\n");
+        fprintf(gnuplot, "set xrange[0:%d]\n", N_BINS - 1);
         fflush(gnuplot);
+
+        free(pp_histogram);
     }
 
     // Clean up buffers
