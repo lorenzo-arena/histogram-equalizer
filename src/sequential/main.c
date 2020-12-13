@@ -105,8 +105,8 @@ void histogram_calc(unsigned int *hist, float *lum, size_t img_size)
     for(unsigned int index = 0; index < img_size; index++)
     {
         // The luminance should be between 0 and 1; multiply by
-	// N_BINS - 1 so that it can't cause overflow
-        hist[(int)floorf(lum[index] * (N_BINS - 1))]++;
+        // N_BINS - 1 so that it can't cause overflow
+        hist[(int)roundf(lum[index] * (N_BINS - 1))]++;
     }
 }
 
@@ -191,7 +191,7 @@ int main(int argc, char **argv)
     log_info("Starting normalized cdf calculation..");
     for(int bin = 0; bin < N_BINS; bin++)
     {
-        cdf_norm[bin] = (float)(cdf[bin]) / (width * height);
+        cdf_norm[bin] = (float)(cdf[bin] - cdf[0]) / ((width * height) - cdf[0]) * (N_BINS - 1);
     }
 
     // Apply the normalized cdf to the luminance
@@ -199,8 +199,8 @@ int main(int argc, char **argv)
     {
         for(int y = 0; y < width; y++)
         {
-	    // Multiply by N_BINS - 1 to prevent overflow
-            hsl_image.l[(width * x) + y] = cdf_norm[(int)floorf(hsl_image.l[(width * x) + y] * (N_BINS - 1))];
+            // Multiply by N_BINS - 1 to prevent overflow
+            hsl_image.l[(width * x) + y] = cdf_norm[(int)roundf(hsl_image.l[(width * x) + y] * (N_BINS - 1))] / (N_BINS - 1);
         }
     }
 
@@ -238,13 +238,13 @@ int main(int argc, char **argv)
         }
 
         log_info("Printing cdf..");
-        for(int bin = 0; bin < (N_BINS - 1); bin++)
+        for(int bin = 0; bin < N_BINS; bin++)
         {
             log_info("%d:%d", bin, cdf[bin]);
         }
 
         log_info("Printing normalized cdf..");
-        for(int bin = 0; bin < (N_BINS - 1); bin++)
+        for(int bin = 0; bin < N_BINS; bin++)
         {
             log_info("%d:%g", bin, cdf_norm[bin]);
         }
