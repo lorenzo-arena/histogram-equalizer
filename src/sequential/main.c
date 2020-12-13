@@ -1,131 +1,29 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include <assert.h>
-#include <math.h>
-#include <argp.h>
+#include <stdlib.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
-#include "hsl.h"
 #include "log.h"
+#include "equalizer.h"
 #include "stopwatch.h"
+#include "arguments.h"
 
-#define N_BINS 500
+struct arguments arguments;
 
 const char *argp_program_version =
 " 1.0";
 
-struct arguments
-{
-    char *args[2];                /* image and output */
-    bool stopwatch;
-    bool plot;
-    bool log_histogram;
-};
-
-void set_default_arguments(struct arguments *arguments)
-{
-    arguments->args[0] = "";
-    arguments->args[1] = "";
-    arguments->stopwatch = false;
-    arguments->plot = false;
-    arguments->log_histogram = false;
-}
-
-static struct argp_option options[] =
-{
-    {"stopwatch", 's', 0, 0, "Enable stopwatch usage", 0},
-    {"plot", 'p', 0, 0, "Enable histogram plot", 0},
-    {"log_histogram", 'l', 0, 0, "Enable histogram log", 0},
-    {0}
-};
-
-static error_t parse_opt (int key, char *arg, struct argp_state *state)
-{
-    struct arguments *arguments = state->input;
-
-    switch (key)
-    {
-        case 's':
-        {
-            arguments->stopwatch = true;
-            break;
-        }
-        case 'p':
-        {
-            arguments->plot = true;
-            break;
-        }
-        case 'l':
-        {
-            arguments->log_histogram = true;
-            break;
-        }
-        case ARGP_KEY_ARG:
-        {
-            if (state->arg_num >= 2)
-            {
-                argp_usage(state);
-            }
-            arguments->args[state->arg_num] = arg;
-            break;
-        }
-        case ARGP_KEY_END:
-        {
-            if (state->arg_num < 2)
-            {
-                argp_usage(state);
-            }
-            break;
-        }
-        default:
-        return ARGP_ERR_UNKNOWN;
-    }
-
-    return 0;
-}
-
-static char args_doc[] = "image output";
-
-static char doc[] =
+const char doc[] =
 "histogram-equalizer-sequential -- Used to equalize the histogram of an image.";
-
-static struct argp argp = {options, parse_opt, args_doc, doc, NULL, NULL, NULL};
-
-
-void histogram_calc(unsigned int *hist, float *lum, size_t img_size)
-{
-    assert(hist != NULL);
-    assert(lum != NULL);
-
-    for(unsigned int index = 0; index < img_size; index++)
-    {
-        // The luminance should be between 0 and 1; multiply by
-        // N_BINS - 1 so that it can't cause overflow
-        hist[(int)roundf(lum[index] * (N_BINS - 1))]++;
-    }
-}
-
-void cdf_calc(unsigned int *cdf, unsigned int *buf, size_t buf_size)
-{
-    assert(cdf != NULL);
-    assert(buf != NULL);
-
-    cdf[0] = buf[0];
-    for(unsigned int index = 1; index < buf_size; index++)
-    {
-        cdf[index] = cdf[index - 1] + buf[index];
-    }
-}
 
 int main(int argc, char **argv)
 {
     int width, height, bpp;
-    struct arguments arguments;
 
     set_default_arguments(&arguments);
 
@@ -138,155 +36,31 @@ int main(int argc, char **argv)
 
     uint8_t* rgb_image = stbi_load(arguments.args[0], &width, &height, &bpp, STBI_rgb);
 
+    // Image BPP will be 4 but the reading is forced to be RGB only
+    log_info("BPP %d", bpp);
     log_info("Width %d", width);
     log_info("Height %d", height);
 
-    // Image BPP will be 4 but the reading is forced to be RGB only
-    log_info("BPP %d", bpp);
+    uint8_t *output_image = NULL;
 
-    hsl_image_t hsl_image = {
-        .h = calloc(width * height, sizeof(int)),
-        .s = calloc(width * height, sizeof(float)),
-        .l = calloc(width * height, sizeof(float))
-    };
+    equalize(rgb_image, width, height, &output_image);
 
-    assert(hsl_image.h != NULL);
-    assert(hsl_image.s != NULL);
-    assert(hsl_image.l != NULL);
-
-    for(int x = 0; x < height; x++)
+    if(NULL == output_image)
     {
-        for(int y = 0; y < width; y++)
-        {
-            unsigned char* pixel_offset = rgb_image + (((width * x) + y) * STBI_rgb);
-            
-            rgb_pixel_t rgb_pixel = {
-                .r = pixel_offset[0],
-                .g = pixel_offset[1],
-                .b = pixel_offset[2]
-            };
+        log_error("Error while equalizing image!");
 
-            hsl_pixel_t hsl_pixel = { .h = 0, .s = 0, .l = 0 };
+        // Clean up buffers
+        stbi_image_free(rgb_image);
+        free(output_image);
 
-            rgb_to_hsl(rgb_pixel, &hsl_pixel);
-
-            hsl_image.h[(width * x) + y] = hsl_pixel.h;
-            hsl_image.s[(width * x) + y] = hsl_pixel.s;
-            hsl_image.l[(width * x) + y] = hsl_pixel.l;
-        }
+        return 1;
     }
 
-    // Calculate the histogram by multiplying the luminance by N_BINS - 1
-    unsigned int *histogram = calloc(N_BINS, sizeof(unsigned int));
-    log_info("Starting histogram calculation..");
-    histogram_calc(histogram, hsl_image.l, width * height);
-
-    // Calculate the cdf
-    unsigned int *cdf = calloc(N_BINS, sizeof(unsigned int));
-    log_info("Starting cdf calculation..");
-    cdf_calc(cdf, histogram, N_BINS);
-
-    // Normalize the cdf so that it can be used as luminance
-    float *cdf_norm = calloc(N_BINS, sizeof(float));
-    log_info("Starting normalized cdf calculation..");
-    for(int bin = 0; bin < N_BINS; bin++)
-    {
-        cdf_norm[bin] = (float)(cdf[bin] - cdf[0]) / ((width * height) - cdf[0]) * (N_BINS - 1);
-    }
-
-    // Apply the normalized cdf to the luminance
-    for(int x = 0; x < height; x++)
-    {
-        for(int y = 0; y < width; y++)
-        {
-            // Multiply by N_BINS - 1 to prevent overflow
-            hsl_image.l[(width * x) + y] = cdf_norm[(int)roundf(hsl_image.l[(width * x) + y] * (N_BINS - 1))] / (N_BINS - 1);
-        }
-    }
-
-    // Convert back to rgb and save the image
-    for(int x = 0; x < height; x++)
-    {
-        for(int y = 0; y < width; y++)
-        {
-            unsigned char* pixel_offset = rgb_image + (((width * x) + y) * STBI_rgb);
-
-            rgb_pixel_t rgb_pixel = { .r = 0, .g = 0, .b = 0 };
-
-            hsl_pixel_t hsl_pixel = {
-                .h = hsl_image.h[(width * x) + y],
-                .s = hsl_image.s[(width * x) + y],
-                .l = hsl_image.l[(width * x) + y]
-            };
-
-            hsl_to_rgb(hsl_pixel, &rgb_pixel);
-
-            pixel_offset[0] = rgb_pixel.r;
-            pixel_offset[1] = rgb_pixel.g;
-            pixel_offset[2] = rgb_pixel.b;
-        }
-    }
-
-    stbi_write_jpg(arguments.args[1], width, height, STBI_rgb, rgb_image, 100);
-
-    if(arguments.log_histogram)
-    {
-        log_info("Printing histogram..");
-        for(int bin = 0; bin < N_BINS; bin++)
-        {
-            log_info("%d:%d", bin, histogram[bin]);
-        }
-
-        log_info("Printing cdf..");
-        for(int bin = 0; bin < N_BINS; bin++)
-        {
-            log_info("%d:%d", bin, cdf[bin]);
-        }
-
-        log_info("Printing normalized cdf..");
-        for(int bin = 0; bin < N_BINS; bin++)
-        {
-            log_info("%d:%g", bin, cdf_norm[bin]);
-        }
-    }
-
-    if(arguments.plot)
-    {
-        // Compute the post processed image histogram
-        unsigned int *pp_histogram = calloc(N_BINS, sizeof(unsigned int));
-        log_info("Starting post processed histogram calculation..");
-        histogram_calc(pp_histogram, hsl_image.l, width * height);
-
-        FILE *gnuplot = popen("gnuplot -persistent", "w");
-        fprintf(gnuplot, "set style line 1 lc rgb '#0025ad' lt 1 lw 0.75\n");
-        fprintf(gnuplot, "set style line 2 lc rgb '#ad2500' lt 1 lw 0.75\n");
-        fprintf(gnuplot, "plot '-' with lines ls 1 title 'Image histogram',\\\n");
-        fprintf(gnuplot, "'-' with lines ls 2 title 'Post-processed image histogram'\n");
-        for (int bin = 0; bin < N_BINS; bin++)
-        {
-            fprintf(gnuplot, "%d %d\n", bin, histogram[bin]);
-        }
-        fprintf(gnuplot, "e\n");
-        for (int bin = 0; bin < N_BINS; bin++)
-        {
-            fprintf(gnuplot, "%d %d\n", bin, pp_histogram[bin]);
-        }
-        fprintf(gnuplot, "e\n");
-        fprintf(gnuplot, "set xrange[0:%d]\n", N_BINS - 1);
-        fflush(gnuplot);
-
-        free(pp_histogram);
-    }
+    stbi_write_jpg(arguments.args[1], width, height, STBI_rgb, output_image, 100);
 
     // Clean up buffers
     stbi_image_free(rgb_image);
-
-    free(hsl_image.h);
-    free(hsl_image.s);
-    free(hsl_image.l);
-    free(histogram);
-    free(cdf);
-    free(cdf_norm);
+    free(output_image);
 
     if(arguments.stopwatch)
     {

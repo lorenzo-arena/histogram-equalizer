@@ -7,7 +7,9 @@ incdir = include_directories('../common')
 sources = ['main.c',
            '../common/hsl.c',
            '../common/log.c',
-           '../common/stopwatch.c']
+           '../common/stopwatch.c',
+           '../common/equalizer.c',
+           '../common/arguments.c']
 
 # add_global_arguments('-DTRACE=1', language : 'c')
 
