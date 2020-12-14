@@ -3,11 +3,6 @@
 
 #include <math.h>
 
-float round_perc(float f)
-{
-    return roundf(f * 100) / 100;
-}
-
 unsigned char max_uc(unsigned char a, unsigned char b)
 {
     return (a > b) ? a : b;
