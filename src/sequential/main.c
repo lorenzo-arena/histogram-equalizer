@@ -56,12 +56,6 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    stbi_write_jpg(arguments.args[1], width, height, STBI_rgb, output_image, 100);
-
-    // Clean up buffers
-    stbi_image_free(rgb_image);
-    free(output_image);
-
     if(arguments.stopwatch)
     {
         stopwatch_stop();
@@ -72,6 +66,13 @@ int main(int argc, char **argv)
             elapsed.tv_sec,
             elapsed.tv_nsec);
     }
+
+    log_info("Writing result in %s..", arguments.args[1]);
+    stbi_write_jpg(arguments.args[1], width, height, STBI_rgb, output_image, 100);
+
+    // Clean up buffers
+    stbi_image_free(rgb_image);
+    free(output_image);
 
     return 0;
 }
