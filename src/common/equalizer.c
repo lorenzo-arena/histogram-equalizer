@@ -17,10 +17,12 @@ void histogram_calc(unsigned int *hist, float *lum, size_t img_size)
     assert(hist != NULL);
     assert(lum != NULL);
 
+    #pragma omp parallel for
     for(unsigned int index = 0; index < img_size; index++)
     {
         // The luminance should be between 0 and 1; multiply by
         // N_BINS - 1 so that it can't cause overflow
+        #pragma omp atomic
         hist[(int)roundf(lum[index] * (N_BINS - 1))]++;
     }
 }
@@ -51,6 +53,7 @@ void equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t *
     assert(input != NULL);
     assert(output != NULL);
 
+    #pragma omp parallel for collapse(2)
     for(unsigned int x = 0; x < height; x++)
     {
         for(unsigned int y = 0; y < width; y++)
@@ -86,12 +89,14 @@ void equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t *
     // Normalize the cdf so that it can be used as luminance
     float *cdf_norm = calloc(N_BINS, sizeof(float));
     log_info("Starting normalized cdf calculation..");
+    #pragma omp parallel for
     for(unsigned int bin = 0; bin < N_BINS; bin++)
     {
         cdf_norm[bin] = (float)(cdf[bin] - cdf[0]) / ((width * height) - cdf[0]) * (N_BINS - 1);
     }
 
     // Apply the normalized cdf to the luminance
+    #pragma omp parallel for collapse(2)
     for(unsigned int x = 0; x < height; x++)
     {
         for(unsigned int y = 0; y < width; y++)
@@ -103,6 +108,8 @@ void equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t *
 
     // Convert back to rgb and save the image
     *output = calloc(width * height * 3, sizeof(uint8_t));
+
+    #pragma omp parallel for collapse(2)
     for(unsigned int x = 0; x < height; x++)
     {
         for(unsigned int y = 0; y < width; y++)
