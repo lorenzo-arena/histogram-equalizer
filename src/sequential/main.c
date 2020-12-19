@@ -31,6 +31,8 @@ int main(int argc, char **argv)
 
     uint8_t* rgb_image = stbi_load(arguments.args[0], &width, &height, &bpp, STBI_rgb);
 
+    assert(rgb_image != NULL);
+
     // Image BPP will be 4 but the reading is forced to be RGB only
     log_info("BPP %d", bpp);
     log_info("Width %d", width);
