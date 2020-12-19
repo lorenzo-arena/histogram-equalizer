@@ -29,11 +29,6 @@ int main(int argc, char **argv)
 
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-    if(arguments.stopwatch)
-    {
-        stopwatch_start();
-    }
-
     uint8_t* rgb_image = stbi_load(arguments.args[0], &width, &height, &bpp, STBI_rgb);
 
     // Image BPP will be 4 but the reading is forced to be RGB only
@@ -42,6 +37,11 @@ int main(int argc, char **argv)
     log_info("Height %d", height);
 
     uint8_t *output_image = NULL;
+
+    if(arguments.stopwatch)
+    {
+        stopwatch_start();
+    }
 
     equalize(rgb_image, width, height, &output_image);
 
