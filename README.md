@@ -36,6 +36,12 @@ For the sequential project, the following options are available:
 - `-s` to print the time elapsed for the execution of the program
 - `-l` to log the histogram and cdf values on stdout
 
+### Tests
+
+Some tests are written using the [Unity](http://www.throwtheswitch.org/unity) C framework.
+
+There are also some script under *utils* like *verifier.sh* which can be used to build multiple project versions, run them and compare the outputs.
+
 ### Result
 
 The following images show the result after the equalization process:
