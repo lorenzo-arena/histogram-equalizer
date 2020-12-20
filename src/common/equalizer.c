@@ -60,7 +60,8 @@ void equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t *
     assert(input != NULL);
     assert(output != NULL);
 
-    #pragma omp parallel
+    #pragma omp parallel \
+        shared(input, hsl_image, histogram, cdf, cdf_norm, output, height, width)
     {
         #pragma omp for collapse(2)
         for(unsigned int x = 0; x < height; x++)
