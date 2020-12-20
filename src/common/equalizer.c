@@ -90,6 +90,7 @@ void equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t *
         {
             // Calculate the histogram by multiplying the luminance by N_BINS - 1
             histogram = calloc(N_BINS, sizeof(unsigned int));
+            assert(histogram != NULL);
             log_info("Starting histogram calculation..");
         }
 
@@ -99,10 +100,13 @@ void equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t *
         {
             // Calculate the cdf
             cdf = calloc(N_BINS, sizeof(unsigned int));
+            assert(cdf != NULL);
             log_info("Starting cdf calculation..");
             cdf_calc(cdf, histogram, N_BINS);
+
             // Normalize the cdf so that it can be used as luminance
             cdf_norm = calloc(N_BINS, sizeof(float));
+            assert(cdf_norm != NULL);
             log_info("Starting normalized cdf calculation..");
         }
 
@@ -127,6 +131,7 @@ void equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t *
         {
             // Convert back to rgb and save the image
             *output = calloc(width * height * 3, sizeof(uint8_t));
+            assert((*output) != NULL);
         }
 
         #pragma omp for collapse(2)
@@ -179,6 +184,8 @@ void equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t *
     {
         // Compute the post processed image histogram
         unsigned int *pp_histogram = calloc(N_BINS, sizeof(unsigned int));
+        assert(pp_histogram != NULL);
+
         log_info("Starting post processed histogram calculation..");
         histogram_calc(pp_histogram, hsl_image.l, width * height);
 
