@@ -19,7 +19,7 @@ const char *argp_program_version =
 " 1.0";
 
 const char doc[] =
-"histogram-equalizer-sequential -- Used to equalize the histogram of an image.";
+"histogram-equalizer-openmp -- Used to equalize the histogram of an image.";
 
 int main(int argc, char **argv)
 {
@@ -58,6 +58,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    // Check the computation time, not including the write on disk
     if(arguments.stopwatch)
     {
         stopwatch_stop();

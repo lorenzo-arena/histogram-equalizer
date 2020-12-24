@@ -34,7 +34,7 @@
             //"program": "${workspaceFolder}/src/parallel/builddir/des-finder-parallel",
             //"args": ["saLpqprs6OBGs", "sa", "-t", "8"],
             "program": "${workspaceFolder}/src/sequential/builddir/histogram-equalizer-sequential",
-            "args": ["foto_cv_new.jpg"],
+            "args": ["../../../assets/pic_low_contrast.jpg", "out.jpg"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/src/sequential/builddir",
             "environment": [],
