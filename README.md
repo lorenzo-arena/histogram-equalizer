@@ -48,5 +48,5 @@ The following images show the result after the equalization process:
 
 | Before processing                                | After processing                                        |
 | ------------------------------------------------ | ------------------------------------------------------- |
-| ![low_contast_pic](./assets/pic_low_contast.jpg) | ![better_contast_pic](./assets/pic_better_contrast.jpg) |
+| ![low_contast_pic](./assets/pic_low_contrast.jpg) | ![better_contast_pic](./assets/pic_better_contrast.jpg) |
 
