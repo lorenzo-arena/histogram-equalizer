@@ -5,7 +5,11 @@
 
 #define LUMINANCE_THRESHOLD (0.5)
 
+#ifdef __NVCC__
+__device__ void rgb_to_hsl(rgb_pixel_t rgb, hsl_pixel_t* hsl)
+#else
 void rgb_to_hsl(rgb_pixel_t rgb, hsl_pixel_t* hsl)
+#endif
 {
     float scaled_r = (float)(rgb.r) / 255;
     float scaled_g = (float)(rgb.g) / 255;
@@ -50,11 +54,19 @@ void rgb_to_hsl(rgb_pixel_t rgb, hsl_pixel_t* hsl)
             hsl->h -= 360;
         }
 
+#ifdef __NVCC__
         hsl->s = chroma / (1 - fabs((2 * max) - chroma -1));
+#else
+        hsl->s = chroma / (1 - fabsf((2 * max) - chroma -1));
+#endif
     }
 }
 
+#ifdef __NVCC__
+__device__ int rgb_to_h(rgb_pixel_t rgb)
+#else
 int rgb_to_h(rgb_pixel_t rgb)
+#endif
 {
     float scaled_r = (float)(rgb.r) / 255;
     float scaled_g = (float)(rgb.g) / 255;
@@ -101,7 +113,11 @@ int rgb_to_h(rgb_pixel_t rgb)
     }
 }
 
+#ifdef __NVCC__
+__device__ float rgb_to_s(rgb_pixel_t rgb)
+#else
 float rgb_to_s(rgb_pixel_t rgb)
+#endif
 {
     float scaled_r = (float)(rgb.r) / 255;
     float scaled_g = (float)(rgb.g) / 255;
@@ -125,7 +141,11 @@ float rgb_to_s(rgb_pixel_t rgb)
     }
 }
 
+#ifdef __NVCC__
+__device__ float rgb_to_l(rgb_pixel_t rgb)
+#else
 float rgb_to_l(rgb_pixel_t rgb)
+#endif
 {
     float scaled_r = (float)(rgb.r) / 255;
     float scaled_g = (float)(rgb.g) / 255;
@@ -138,7 +158,11 @@ float rgb_to_l(rgb_pixel_t rgb)
     return (min + max) / 2;
 }
 
+#ifdef __NVCC__
+__device__ void hsl_to_rgb(hsl_pixel_t hsl, rgb_pixel_t *rgb)
+#else
 void hsl_to_rgb(hsl_pixel_t hsl, rgb_pixel_t *rgb)
+#endif
 {
     // 1. If saturation is zero we have a shade of gray
     if(hsl.s == 0)
@@ -147,12 +171,20 @@ void hsl_to_rgb(hsl_pixel_t hsl, rgb_pixel_t *rgb)
     }
     else
     {
-        float chroma = (1 - fabs((2 * hsl.l) - 1)) * hsl.s;
+#ifdef __NVCC__
+        float chroma = (1 - fabsf((2 * hsl.l) - 1)) * hsl.s;
+#else
+        float chroma = (1 - fabsf((2 * hsl.l) - 1)) * hsl.s;
+#endif
 
         double hue_iptr = 0.0;
         float hue = (modf((double)(hsl.h) / 360, &hue_iptr) * 360) / 60;
 
-        float x = chroma * (1 - fabs(fmod(hue, 2.0) - 1));
+#ifdef __NVCC__
+        float x = chroma * (1 - fabsf(fmodf(hue, 2.0) - 1));
+#else
+        float x = chroma * (1 - fabsf(fmodf(hue, 2.0) - 1));
+#endif
 
         float red = 0.0;
         float green = 0.0;
