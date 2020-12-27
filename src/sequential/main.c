@@ -53,7 +53,6 @@ int main(int argc, char **argv)
 
         // Clean up buffers
         stbi_image_free(rgb_image);
-        free(output_image);
 
         return 1;
     }
