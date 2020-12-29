@@ -2,6 +2,15 @@
 
 This project was made for the "parallel computing" course at the Computer Engineering University of Florence.
 
+Git submodules are used, so make sure to run
+
+```bash
+$ git submodule init
+$ git submodule update
+```
+
+before building the targets.
+
 ### Goal
 
 The main goal is to write two version of the same program which must compute the histogram of an image an perform an histogram equalization.
