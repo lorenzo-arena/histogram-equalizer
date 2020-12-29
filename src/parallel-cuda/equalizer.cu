@@ -2,6 +2,10 @@
 
 #include "hsl.cuh"
 
+extern "C" {
+    #include "cexception/lib/CException.h"
+}
+
 #define N_BINS 500
 
 __global__ void compute_histogram(const char *image,
