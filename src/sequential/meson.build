@@ -9,7 +9,8 @@ sources = ['main.c',
            '../common/log.c',
            '../common/stopwatch.c',
            '../common/equalizer.c',
-           '../common/arguments.c']
+           '../common/arguments.c',
+           '../common/cexception/lib/CException.c']
 
 # add_global_arguments('-DTRACE=1', language : 'c')
 

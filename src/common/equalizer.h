@@ -3,6 +3,6 @@
 
 #include <stdint.h>
 
-void equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **output);
+int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **output);
 
 #endif
