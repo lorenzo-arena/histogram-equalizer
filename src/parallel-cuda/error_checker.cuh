@@ -2,8 +2,8 @@
 #define __ERROR_CHECKER_H__
 
 extern "C" {
-    #include <stdio.h>
     #include "cexception/lib/CException.h"
+    #include "log.h"
 }
 
 #define gpuErrorCheck(code) { gpuAssert((code), __FILE__, __LINE__); }
