@@ -1,9 +1,13 @@
 #include "equalizer.cuh"
 
+#include "error_checker.cuh"
 #include "hsl.cuh"
 
 extern "C" {
+    #include <stdio.h>
     #include "cexception/lib/CException.h"
+    #include "log.h"
+    #include "errors.h"
 }
 
 #define N_BINS 500
@@ -87,8 +91,9 @@ __global__ void convert_hsl_to_rgb(const hsl_image_t hsl_image,
     }
 }
 
-void equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **output)
+int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **output)
 {
+    CEXCEPTION_T e = NO_ERROR;
     cudaError_t err = cudaSuccess;
 
     uint8_t *d_rgb_image = NULL;
@@ -101,31 +106,38 @@ void equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t *
         .l = NULL
     };
 
-    // Allocate memory for the image on the device
-    cudaMalloc((void**)&d_rgb_image, 3 * width * height);
-    cudaMemcpy(d_rgb_image, input, 3 * width * height, cudaMemcpyHostToDevice);
+    Try {
+        // Allocate memory for the image on the device
+        gpuErrorCheck( cudaMalloc((void**)&d_rgb_image, 3 * width * height) );
+        gpuErrorCheck( cudaMemcpy(d_rgb_image, input, 3 * width * height, cudaMemcpyHostToDevice) );
 
-    cudaMalloc((void**)&(d_hsl_image.h), width * height);
-    cudaMalloc((void**)&(d_hsl_image.s), width * height);
-    cudaMalloc((void**)&(d_hsl_image.l), width * height);
+        gpuErrorCheck( cudaMalloc((void**)&(d_hsl_image.h), width * height) );
+        gpuErrorCheck( cudaMalloc((void**)&(d_hsl_image.s), width * height) );
+        gpuErrorCheck( cudaMalloc((void**)&(d_hsl_image.l), width * height) );
 
-    // Allocate memory for the output
-    *output = (uint8_t *)calloc(3 * width * height, sizeof(uint8_t));
-    cudaMalloc((void**)&d_output_image, 3 * width * height);
+        // Allocate memory for the output
+        *output = (uint8_t *)calloc(3 * width * height, sizeof(uint8_t));
 
-    cudaMalloc((void**)&d_histogram, N_BINS * sizeof(unsigned int));
+        if(NULL == (*output))
+        {
+            Throw(UNALLOCATED_MEMORY);
+        }
 
-    // TODO : here the kernel must be started
-    int threadsPerBlock = 512;
-    int blocksPerGrid = ((width * height) + threadsPerBlock - 1) / threadsPerBlock;
-    convert_rgb_to_hsl<<<blocksPerGrid, threadsPerBlock>>>(d_rgb_image, d_hsl_image, width * height);
-    //compute_histogram<<<1024, threadsPerBlock, N_BINS * sizeof(unsigned int)>>>(d_rgb_image, (int)(3 * width * height));
-    convert_hsl_to_rgb<<<blocksPerGrid, threadsPerBlock>>>(d_hsl_image, d_output_image, width * height);
+        gpuErrorCheck( cudaMalloc((void**)&d_output_image, 3 * width * height) );
 
-    err = cudaGetLastError();
+        gpuErrorCheck( cudaMalloc((void**)&d_histogram, N_BINS * sizeof(unsigned int)) );
 
-    // Copy the result back from the device
-    cudaMemcpy(*output, d_output_image, 3 * width * height, cudaMemcpyDeviceToHost);
+        int threadsPerBlock = 512;
+        int blocksPerGrid = ((width * height) + threadsPerBlock - 1) / threadsPerBlock;
+        convert_rgb_to_hsl<<<blocksPerGrid, threadsPerBlock>>>(d_rgb_image, d_hsl_image, width * height);
+        //compute_histogram<<<1024, threadsPerBlock, N_BINS * sizeof(unsigned int)>>>(d_rgb_image, (int)(3 * width * height));
+        convert_hsl_to_rgb<<<blocksPerGrid, threadsPerBlock>>>(d_hsl_image, d_output_image, width * height);
+
+        // Copy the result back from the device
+        gpuErrorCheck( cudaMemcpy(*output, d_output_image, 3 * width * height, cudaMemcpyDeviceToHost) );
+    } Catch(e) {
+        log_error("Caught exception %d while equalizing image!", e);
+    }
 
     cudaFree(d_rgb_image);
     cudaFree(d_output_image);
@@ -133,4 +145,6 @@ void equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t *
     cudaFree(d_hsl_image.h);
     cudaFree(d_hsl_image.s);
     cudaFree(d_hsl_image.l);
+
+    return e;
 }

@@ -9,10 +9,12 @@ extern "C" {
     #include "stb_image.h"
     #define STB_IMAGE_WRITE_IMPLEMENTATION
     #include "stb_image_write.h"
-    
+
     #include "log.h"
     #include "stopwatch.h"
     #include "arguments.h"
+    #include "cexception/lib/CException.h"
+    #include "errors.h"
 }
 
 #include "equalizer.cuh"
@@ -28,51 +30,71 @@ const char doc[] =
 int main(int argc, char **argv)
 {
     int width, height, bpp;
-
     uint8_t *rgb_image = NULL;
     uint8_t *output_image = NULL;
+    CEXCEPTION_T e;
 
-    set_default_arguments(&arguments);
+    Try {
+        set_default_arguments(&arguments);
 
-    argp_parse(&argp, argc, argv, 0, 0, &arguments);
+        argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-    rgb_image = stbi_load(arguments.args[0], &width, &height, &bpp, STBI_rgb);
+        rgb_image = stbi_load(arguments.args[0], &width, &height, &bpp, STBI_rgb);
 
-    assert(rgb_image != NULL);
+        if(NULL == rgb_image)
+        {
+            log_error("Couldn't read image %s", arguments.args[0]);
+            Throw(UNALLOCATED_MEMORY);
+        }
 
-    // Image BPP will be 4 but the reading is forced to be RGB only
-    log_info("BPP %d", bpp);
-    log_info("Width %d", width);
-    log_info("Height %d", height);
+        // Image BPP will be 4 but the reading is forced to be RGB only
+        log_info("BPP %d", bpp);
+        log_info("Width %d", width);
+        log_info("Height %d", height);
 
-    if(arguments.stopwatch)
-    {
-        stopwatch_start();
+        if(arguments.stopwatch)
+        {
+            stopwatch_start();
+        }
+
+        int res = equalize(rgb_image, width, height, &output_image);
+
+        if(cudaSuccess != res)
+        {
+            log_error("Error while equalizing image!");
+            Throw(res);
+        }
+
+        if(NULL == output_image)
+        {
+            log_error("Error while equalizing image!");
+            Throw(UNALLOCATED_MEMORY);
+        }
+
+        if(arguments.stopwatch)
+        {
+            stopwatch_stop();
+
+            struct timespec elapsed = stopwatch_get_elapsed();
+
+            log_info("Elapsed time: %ld.%09ld",
+                elapsed.tv_sec,
+                elapsed.tv_nsec);
+        }
+
+        log_info("Writing result in %s..", arguments.args[1]);
+        stbi_write_jpg(arguments.args[1], width, height, STBI_rgb, output_image, 100);
+    } Catch(e) {
+        log_error("Catched error %d!", e);
     }
-
-    equalize(rgb_image, width, height, &output_image);
-
-    if(arguments.stopwatch)
-    {
-        stopwatch_stop();
-
-        struct timespec elapsed = stopwatch_get_elapsed();
-
-        log_info("Elapsed time: %ld.%09ld",
-            elapsed.tv_sec,
-            elapsed.tv_nsec);
-    }
-
-    log_info("Writing result in %s..", arguments.args[1]);
-    stbi_write_jpg(arguments.args[1], width, height, STBI_rgb, output_image, 100);
 
     // Clean up buffers
-    if(rgb_image != NULL)
+    if(NULL != rgb_image)
     {
         stbi_image_free(rgb_image);
     }
 
-    if(output_image != NULL)
+    if(NULL != output_image)
     {
         free(output_image);
     }
