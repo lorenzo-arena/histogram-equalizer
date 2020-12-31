@@ -102,6 +102,8 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
         #pragma omp parallel \
             shared(input, hsl_image, histogram, cdf, cdf_norm, output, height, width)
         {
+            // **************************************
+            // STEP 1 - convert every pixel from RGB to HSL
             #pragma omp for collapse(2)
             for(unsigned int x = 0; x < height; x++)
             {
@@ -125,6 +127,8 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
                 }
             }
 
+            // **************************************
+            // STEP 2 - compute the histogram of the luminance for each pixel
             #pragma omp single
             {
                 // Calculate the histogram by multiplying the luminance by N_BINS - 1
@@ -140,6 +144,8 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
 
             histogram_calc(histogram, hsl_image.l, width * height);
 
+            // **************************************
+            // STEP 3 - compute the cumulative distribution function
             #pragma omp single
             {
                 // Calculate the cdf
@@ -164,13 +170,16 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
                 log_info("Starting normalized cdf calculation..");
             }
 
+            // **************************************
+            // STEP 4 - compute the normalized cumulative distribution function
             #pragma omp for
             for(unsigned int bin = 0; bin < N_BINS; bin++)
             {
                 cdf_norm[bin] = (float)(cdf[bin] - cdf[0]) / ((width * height) - cdf[0]) * (N_BINS - 1);
             }
 
-            // Apply the normalized cdf to the luminance
+            // **************************************
+            // STEP 5 - apply the normalized CDF to the luminance for each pixel
             #pragma omp for collapse(2)
             for(unsigned int x = 0; x < height; x++)
             {
@@ -192,6 +201,8 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
                 }
             }
 
+            // **************************************
+            // STEP 6 - convert each HSL pixel back to RGB
             #pragma omp for collapse(2)
             for(unsigned int x = 0; x < height; x++)
             {
