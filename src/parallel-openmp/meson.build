@@ -4,7 +4,7 @@ project('histogram-equalizer-openmp', 'c',
 
 incdir = include_directories('../common')
 
-sources = ['main.c',
+sources = ['../sequential/main.c',
            '../common/hsl.c',
            '../common/log.c',
            '../common/stopwatch.c',

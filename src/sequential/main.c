@@ -18,8 +18,13 @@ struct arguments arguments;
 const char *argp_program_version =
 " 1.0";
 
-const char doc[] =
-"histogram-equalizer-sequential -- Used to equalize the histogram of an image.";
+#ifdef _OPENMP
+    const char doc[] =
+        "histogram-equalizer-openmp -- Used to equalize the histogram of an image.";
+#else
+    const char doc[] =
+        "histogram-equalizer-sequential -- Used to equalize the histogram of an image.";
+#endif
 
 int main(int argc, char **argv)
 {
