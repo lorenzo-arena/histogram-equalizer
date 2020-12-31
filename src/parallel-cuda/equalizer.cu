@@ -129,9 +129,28 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
 
         int threadsPerBlock = 512;
         int blocksPerGrid = ((width * height) + threadsPerBlock - 1) / threadsPerBlock;
+
+        // **************************************
+        // STEP 1 - convert every pixel from RGB to HSL
         convert_rgb_to_hsl<<<blocksPerGrid, threadsPerBlock>>>(d_rgb_image, d_hsl_image, width * height);
-        //compute_histogram<<<1024, threadsPerBlock, N_BINS * sizeof(unsigned int)>>>(d_rgb_image, (int)(3 * width * height));
-        convert_hsl_to_rgb<<<blocksPerGrid, threadsPerBlock>>>(d_hsl_image, d_output_image, width * height);
+        
+        // **************************************
+        // STEP 2 - compute the histogram of the luminance for each pixel
+        //compute_histogram<<<1024, threadsPerBlock, N_BINS * sizeof(unsigned int)>>>(d_hsl_image.l, (int)(width * height));
+
+        // **************************************
+        // STEP 3 - compute the cumulative distribution function
+        
+        // **************************************
+        // STEP 4 - compute the normalized cumulative distribution function
+
+        // **************************************
+        // STEP 5 - apply the normalized CDF to the luminance for each pixel
+
+        // **************************************
+        // STEP 6 - convert each HSL pixel back to RGB
+        blocksPerGrid = ((width * height) + BLOCK_SIZE - 1) / BLOCK_SIZE;
+        convert_hsl_to_rgb<<<blocksPerGrid, BLOCK_SIZE>>>(d_hsl_image, d_output_image, width * height);
 
         // Copy the result back from the device
         gpuErrorCheck( cudaMemcpy(*output, d_output_image, 3 * width * height, cudaMemcpyDeviceToHost) );
