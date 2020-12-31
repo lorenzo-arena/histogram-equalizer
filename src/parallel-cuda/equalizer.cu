@@ -47,7 +47,7 @@ __global__ void convert_rgb_to_hsl(const uint8_t *rgb_image,
 
     if(tid < num_elements)
     {
-        const uint8_t *pixel_offset = rgb_image + (tid * 3);
+        const uint8_t *pixel_offset = &rgb_image[tid * 3];
 
         rgb_pixel_t rgb_pixel = {
             .r = pixel_offset[0],
@@ -108,12 +108,12 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
 
     Try {
         // Allocate memory for the image on the device
-        gpuErrorCheck( cudaMalloc((void**)&d_rgb_image, 3 * width * height) );
+        gpuErrorCheck( cudaMalloc((void**)&d_rgb_image, 3 * width * height * sizeof(uint8_t)) );
         gpuErrorCheck( cudaMemcpy(d_rgb_image, input, 3 * width * height, cudaMemcpyHostToDevice) );
 
-        gpuErrorCheck( cudaMalloc((void**)&(d_hsl_image.h), width * height) );
-        gpuErrorCheck( cudaMalloc((void**)&(d_hsl_image.s), width * height) );
-        gpuErrorCheck( cudaMalloc((void**)&(d_hsl_image.l), width * height) );
+        gpuErrorCheck( cudaMalloc((void**)&(d_hsl_image.h), width * height * sizeof(int)) );
+        gpuErrorCheck( cudaMalloc((void**)&(d_hsl_image.s), width * height * sizeof(float)) );
+        gpuErrorCheck( cudaMalloc((void**)&(d_hsl_image.l), width * height * sizeof(float)) );
 
         // Allocate memory for the output
         *output = (uint8_t *)calloc(3 * width * height, sizeof(uint8_t));
@@ -123,7 +123,7 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
             Throw(UNALLOCATED_MEMORY);
         }
 
-        gpuErrorCheck( cudaMalloc((void**)&d_output_image, 3 * width * height) );
+        gpuErrorCheck( cudaMalloc((void**)&d_output_image, 3 * width * height * sizeof(uint8_t)) );
 
         gpuErrorCheck( cudaMalloc((void**)&d_histogram, N_BINS * sizeof(unsigned int)) );
 
@@ -133,14 +133,14 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
         // **************************************
         // STEP 1 - convert every pixel from RGB to HSL
         convert_rgb_to_hsl<<<blocksPerGrid, threadsPerBlock>>>(d_rgb_image, d_hsl_image, width * height);
-        
+
         // **************************************
         // STEP 2 - compute the histogram of the luminance for each pixel
         //compute_histogram<<<1024, threadsPerBlock, N_BINS * sizeof(unsigned int)>>>(d_hsl_image.l, (int)(width * height));
 
         // **************************************
         // STEP 3 - compute the cumulative distribution function
-        
+
         // **************************************
         // STEP 4 - compute the normalized cumulative distribution function
 
