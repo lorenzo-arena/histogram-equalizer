@@ -12,7 +12,7 @@ extern "C" {
 
 #define N_BINS 500
 
-__global__ void compute_histogram(const char *image,
+__global__ void compute_histogram(const float *image,
                                   unsigned int *bins,
                                   unsigned int num_elements)
 {
@@ -28,7 +28,7 @@ __global__ void compute_histogram(const char *image,
 
     for (unsigned int i = tid; i < num_elements; i += blockDim.x * gridDim.x)
     {
-        atomicAdd(&(bins_s[(unsigned int)image[i]]), 1);
+        atomicAdd(&(bins_s[(unsigned int)__float2int_rn(image[i] * (N_BINS - 1))]), 1);
     }
 
     __syncthreads();
@@ -136,7 +136,8 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
 
         // **************************************
         // STEP 2 - compute the histogram of the luminance for each pixel
-        //compute_histogram<<<1024, threadsPerBlock, N_BINS * sizeof(unsigned int)>>>(d_hsl_image.l, (int)(width * height));
+        blocksPerGrid = 30;
+        compute_histogram<<<blocksPerGrid, BLOCK_SIZE, N_BINS * sizeof(unsigned int)>>>(d_hsl_image.l, d_histogram, (width * height));
 
         // **************************************
         // STEP 3 - compute the cumulative distribution function
