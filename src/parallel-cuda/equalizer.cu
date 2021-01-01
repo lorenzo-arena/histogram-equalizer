@@ -12,6 +12,8 @@ extern "C" {
 
 #define N_BINS 500
 
+#define BLOCK_SIZE 512
+
 __global__ void compute_histogram(const float *image,
                                   unsigned int *bins,
                                   unsigned int num_elements)
@@ -91,14 +93,43 @@ __global__ void convert_hsl_to_rgb(const hsl_image_t hsl_image,
     }
 }
 
+__global__ void compute_cdf(unsigned int *input, unsigned int *output, int input_size)
+{
+    __shared__ unsigned int sh_out[BLOCK_SIZE];
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (tid < input_size)
+    {
+        sh_out[threadIdx.x] = input[tid];
+    }
+
+    for (unsigned int stride = 1; stride < blockDim.x; stride *= 2)
+    {
+        __syncthreads();
+        if(threadIdx.x >= stride)
+        {
+            sh_out[threadIdx.x] += sh_out[threadIdx.x - stride];
+        }
+    }
+
+    __syncthreads();
+
+    if (tid < input_size)
+    {
+        output[tid] = sh_out[threadIdx.x];
+    }
+}
+
 int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **output)
 {
     CEXCEPTION_T e = NO_ERROR;
-    cudaError_t err = cudaSuccess;
+
+    int blocksPerGrid = 0;
 
     uint8_t *d_rgb_image = NULL;
     uint8_t *d_output_image = NULL;
     unsigned int *d_histogram = NULL;
+    unsigned int *d_cdf = NULL;
 
     hsl_image_t d_hsl_image = {
         .h = NULL,
@@ -126,13 +157,12 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
         gpuErrorCheck( cudaMalloc((void**)&d_output_image, 3 * width * height * sizeof(uint8_t)) );
 
         gpuErrorCheck( cudaMalloc((void**)&d_histogram, N_BINS * sizeof(unsigned int)) );
-
-        int threadsPerBlock = 512;
-        int blocksPerGrid = ((width * height) + threadsPerBlock - 1) / threadsPerBlock;
+        gpuErrorCheck( cudaMalloc((void**)&d_cdf, N_BINS * sizeof(unsigned int)) );
 
         // **************************************
         // STEP 1 - convert every pixel from RGB to HSL
-        convert_rgb_to_hsl<<<blocksPerGrid, threadsPerBlock>>>(d_rgb_image, d_hsl_image, width * height);
+        blocksPerGrid = ((width * height) + BLOCK_SIZE - 1) / BLOCK_SIZE;
+        convert_rgb_to_hsl<<<blocksPerGrid, BLOCK_SIZE>>>(d_rgb_image, d_hsl_image, width * height);
 
         // **************************************
         // STEP 2 - compute the histogram of the luminance for each pixel
@@ -140,7 +170,10 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
         compute_histogram<<<blocksPerGrid, BLOCK_SIZE, N_BINS * sizeof(unsigned int)>>>(d_hsl_image.l, d_histogram, (width * height));
 
         // **************************************
-        // STEP 3 - compute the cumulative distribution function
+        // STEP 3 - compute the cumulative distribution function by applying the parallelized
+        // version of the scan algorithm
+        blocksPerGrid = (N_BINS + BLOCK_SIZE - 1) / BLOCK_SIZE;
+        compute_cdf<<<blocksPerGrid, BLOCK_SIZE>>>(d_histogram, d_cdf, N_BINS);
 
         // **************************************
         // STEP 4 - compute the normalized cumulative distribution function
@@ -162,6 +195,7 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
     cudaFree(d_rgb_image);
     cudaFree(d_output_image);
     cudaFree(d_histogram);
+    cudaFree(d_cdf);
     cudaFree(d_hsl_image.h);
     cudaFree(d_hsl_image.s);
     cudaFree(d_hsl_image.l);
