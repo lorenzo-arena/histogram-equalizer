@@ -106,6 +106,7 @@ __global__ void compute_cdf(unsigned int *input, unsigned int *output, int input
     for (unsigned int stride = 1; stride < blockDim.x; stride *= 2)
     {
         __syncthreads();
+
         if(threadIdx.x >= stride)
         {
             sh_out[threadIdx.x] += sh_out[threadIdx.x - stride];
@@ -127,6 +128,16 @@ __global__ void compute_normalized_cdf(unsigned int *cdf, float *cdf_norm, int c
     if(tid < cdf_size)
     {
         cdf_norm[tid] = ((float)(cdf[tid] - cdf[0]) / (norm_factor - cdf[0])) * (cdf_size - 1);
+    }
+}
+
+__global__ void apply_normalized_cdf(const float *cdf_norm, const hsl_image_t hsl_image, int cdf_size, int image_size)
+{
+    unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if(tid < image_size)
+    {
+        hsl_image.l[tid] = cdf_norm[(unsigned int)__float2int_rn(hsl_image.l[tid] * (cdf_size - 1))] / (cdf_size - 1);
     }
 }
 
@@ -194,6 +205,8 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
 
         // **************************************
         // STEP 5 - apply the normalized CDF to the luminance for each pixel
+        blocksPerGrid = ((width * height) + BLOCK_SIZE - 1) / BLOCK_SIZE;
+        apply_normalized_cdf<<<blocksPerGrid, BLOCK_SIZE>>>(d_cdf_norm, d_hsl_image, N_BINS, (width * height));
 
         // **************************************
         // STEP 6 - convert each HSL pixel back to RGB
