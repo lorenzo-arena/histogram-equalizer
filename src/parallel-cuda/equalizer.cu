@@ -120,6 +120,16 @@ __global__ void compute_cdf(unsigned int *input, unsigned int *output, int input
     }
 }
 
+__global__ void compute_normalized_cdf(unsigned int *cdf, float *cdf_norm, int cdf_size, int norm_factor)
+{
+    unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if(tid < cdf_size)
+    {
+        cdf_norm[tid] = ((float)(cdf[tid] - cdf[0]) / (norm_factor - cdf[0])) * (cdf_size - 1);
+    }
+}
+
 int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **output)
 {
     CEXCEPTION_T e = NO_ERROR;
@@ -130,6 +140,7 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
     uint8_t *d_output_image = NULL;
     unsigned int *d_histogram = NULL;
     unsigned int *d_cdf = NULL;
+    float *d_cdf_norm = NULL;
 
     hsl_image_t d_hsl_image = {
         .h = NULL,
@@ -158,11 +169,12 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
 
         gpuErrorCheck( cudaMalloc((void**)&d_histogram, N_BINS * sizeof(unsigned int)) );
         gpuErrorCheck( cudaMalloc((void**)&d_cdf, N_BINS * sizeof(unsigned int)) );
+        gpuErrorCheck( cudaMalloc((void**)&d_cdf_norm, N_BINS * sizeof(float)) );
 
         // **************************************
         // STEP 1 - convert every pixel from RGB to HSL
         blocksPerGrid = ((width * height) + BLOCK_SIZE - 1) / BLOCK_SIZE;
-        convert_rgb_to_hsl<<<blocksPerGrid, BLOCK_SIZE>>>(d_rgb_image, d_hsl_image, width * height);
+        convert_rgb_to_hsl<<<blocksPerGrid, BLOCK_SIZE>>>(d_rgb_image, d_hsl_image, (width * height));
 
         // **************************************
         // STEP 2 - compute the histogram of the luminance for each pixel
@@ -177,6 +189,8 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
 
         // **************************************
         // STEP 4 - compute the normalized cumulative distribution function
+        blocksPerGrid = (N_BINS + BLOCK_SIZE - 1) / BLOCK_SIZE;
+        compute_normalized_cdf<<<blocksPerGrid, BLOCK_SIZE>>>(d_cdf, d_cdf_norm, N_BINS, (width * height));
 
         // **************************************
         // STEP 5 - apply the normalized CDF to the luminance for each pixel
@@ -196,6 +210,7 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
     cudaFree(d_output_image);
     cudaFree(d_histogram);
     cudaFree(d_cdf);
+    cudaFree(d_cdf_norm);
     cudaFree(d_hsl_image.h);
     cudaFree(d_hsl_image.s);
     cudaFree(d_hsl_image.l);
