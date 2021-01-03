@@ -144,6 +144,7 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
         }
 
         #pragma omp parallel \
+            num_threads(arguments.threads) \
             shared(input, hsl_image, histogram, cdf, cdf_norm, output, height, width)
         {
             // **************************************

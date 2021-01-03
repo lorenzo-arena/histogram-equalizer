@@ -53,6 +53,10 @@ int main(int argc, char **argv)
         log_info("Width %d", width);
         log_info("Height %d", height);
 
+#ifdef _OPENMP
+        log_info("Starting processing with %d threads", arguments.threads);
+#endif
+
         if(arguments.stopwatch)
         {
             stopwatch_start();

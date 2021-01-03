@@ -10,6 +10,9 @@ struct arguments
     bool stopwatch;
     bool plot;
     bool log_histogram;
+#ifdef _OPENMP
+    int threads;
+#endif
 };
 
 extern struct arguments arguments;
