@@ -2,36 +2,35 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <math.h>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
+extern "C" {
+    #define STB_IMAGE_IMPLEMENTATION
+    #include "stb_image.h"
+    #define STB_IMAGE_WRITE_IMPLEMENTATION
+    #include "stb_image_write.h"
 
-#include "log.h"
-#include "equalizer.h"
-#include "stopwatch.h"
-#include "arguments.h"
-#include "cexception/lib/CException.h"
-#include "errors.h"
+    #include "log.h"
+    #include "stopwatch.h"
+    #include "arguments.h"
+    #include "cexception/lib/CException.h"
+    #include "errors.h"
+}
+
+#include "equalizer.cuh"
 
 struct arguments arguments;
 
 const char *argp_program_version =
 " 1.0";
 
-#ifdef _OPENMP
-    const char doc[] =
-        "histogram-equalizer-openmp -- Used to equalize the histogram of an image.";
-#else
-    const char doc[] =
-        "histogram-equalizer-sequential -- Used to equalize the histogram of an image.";
-#endif
+const char doc[] =
+"histogram-equalizer-cudaa -- Used to equalize the histogram of an image.";
 
 int main(int argc, char **argv)
 {
     int width, height, bpp;
-    uint8_t* rgb_image = NULL;
+    uint8_t *rgb_image = NULL;
     uint8_t *output_image = NULL;
     CEXCEPTION_T e;
 
@@ -58,12 +57,12 @@ int main(int argc, char **argv)
             stopwatch_start();
         }
 
-        int eq_res = equalize(rgb_image, width, height, &output_image);
+        int res = equalize(rgb_image, width, height, &output_image);
 
-        if(NO_ERROR != eq_res)
+        if(cudaSuccess != res)
         {
             log_error("Error while equalizing image!");
-            Throw(eq_res);
+            Throw(res);
         }
 
         if(NULL == output_image)
