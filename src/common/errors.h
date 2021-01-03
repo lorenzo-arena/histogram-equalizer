@@ -1,5 +1,5 @@
-#ifndef __ERROR_H__
-#define __ERROR_H__
+#ifndef __ERRORS_H__
+#define __ERRORS_H__
 
 #define NO_ERROR                   0
 #define GENERIC_ERROR              1

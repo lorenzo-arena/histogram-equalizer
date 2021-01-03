@@ -10,8 +10,7 @@
 #include "equalizer.h"
 #include "cexception/lib/CException.h"
 #include "errors.h"
-
-#define N_BINS 500
+#include "defines.h"
 
 void histogram_calc(unsigned int *hist, float *lum, size_t img_size)
 {

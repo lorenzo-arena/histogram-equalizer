@@ -9,9 +9,8 @@ extern "C" {
     #include "log.h"
     #include "errors.h"
     #include "arguments.h"
+    #include "defines.h"
 }
-
-#define N_BINS 500
 
 #define BLOCK_SIZE 512
 
