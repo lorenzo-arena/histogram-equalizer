@@ -31,8 +31,6 @@
             "name": "Build and debug sequential project",
             "type": "cppdbg",
             "request": "launch",
-            //"program": "${workspaceFolder}/src/parallel/builddir/des-finder-parallel",
-            //"args": ["saLpqprs6OBGs", "sa", "-t", "8"],
             "program": "${workspaceFolder}/src/sequential/builddir/histogram-equalizer-sequential",
             "args": ["../../../assets/pic_low_contrast.jpg", "out.jpg"],
             "stopAtEntry": false,
@@ -48,6 +46,27 @@
                 }
             ],
             "preLaunchTask": "Build sequential project",
+            "miDebuggerPath": "/usr/bin/gdb"
+        },
+        {
+            "name": "Build and debug OpenMP project",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/parallel-openmp/builddir/histogram-equalizer-openmp",
+            "args": ["../../../assets/pic_low_contrast.jpg", "out.jpg", "-t", "2"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/src/parallel-openmp/builddir",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "Build OpenMP project",
             "miDebuggerPath": "/usr/bin/gdb"
         }
     ]

@@ -13,6 +13,13 @@
             "command": "cd src/sequential && meson builddir && meson compile -C builddir",
             "problemMatcher": [],
             "group": "build"
+        },
+        {
+            "label": "Build OpenMP project",
+            "type": "shell",
+            "command": "cd src/parallel-openmp && meson builddir && meson compile -C builddir",
+            "problemMatcher": [],
+            "group": "build"
         }
     ],
     "version": "2.0.0"
