@@ -8,6 +8,7 @@ extern "C" {
     #include "cexception/lib/CException.h"
     #include "log.h"
     #include "errors.h"
+    #include "arguments.h"
 }
 
 #define N_BINS 500
@@ -215,6 +216,58 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
 
         // Copy the result back from the device
         gpuErrorCheck( cudaMemcpy(*output, d_output_image, 3 * width * height, cudaMemcpyDeviceToHost) );
+
+        if(arguments.log_histogram)
+        {
+            unsigned int *h_histogram = NULL;
+            unsigned int *h_cdf = NULL;
+            float *h_cdf_norm = NULL;
+
+            h_histogram = (unsigned int *)calloc(N_BINS, sizeof(unsigned int));
+            h_cdf = (unsigned int *)calloc(N_BINS, sizeof(unsigned int));
+            h_cdf_norm = (float *)calloc(N_BINS, sizeof(float));
+
+            if(NULL == h_histogram)
+            {
+                Throw(UNALLOCATED_MEMORY);
+            }
+
+            if(NULL == h_cdf)
+            {
+                Throw(UNALLOCATED_MEMORY);
+            }
+
+            if(NULL == h_cdf_norm)
+            {
+                Throw(UNALLOCATED_MEMORY);
+            }
+
+            gpuErrorCheck( cudaMemcpy(h_histogram, d_histogram, N_BINS * sizeof(unsigned int), cudaMemcpyDeviceToHost) );
+            gpuErrorCheck( cudaMemcpy(h_cdf, d_cdf, N_BINS * sizeof(unsigned int), cudaMemcpyDeviceToHost) );
+            gpuErrorCheck( cudaMemcpy(h_cdf_norm, d_cdf_norm, N_BINS * sizeof(float), cudaMemcpyDeviceToHost) );
+
+            log_info("Printing histogram..");
+            for(int bin = 0; bin < N_BINS; bin++)
+            {
+                log_info("%d:%d", bin, h_histogram[bin]);
+            }
+
+            log_info("Printing cdf..");
+            for(int bin = 0; bin < N_BINS; bin++)
+            {
+                log_info("%d:%d", bin, h_cdf[bin]);
+            }
+
+            log_info("Printing normalized cdf..");
+            for(int bin = 0; bin < N_BINS; bin++)
+            {
+                log_info("%d:%g", bin, h_cdf_norm[bin]);
+            }
+
+            free(h_histogram);
+            free(h_cdf);
+            free(h_cdf_norm);
+        }
     } Catch(e) {
         log_error("Caught exception %d while equalizing image!", e);
     }
