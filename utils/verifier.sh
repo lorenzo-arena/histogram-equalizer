@@ -5,6 +5,22 @@ INPUT_FILEPATH="../../../assets/pic_low_contrast.jpg"
 SEQUENTIAL_PATH="src/sequential"
 OPENMP_PATH="src/parallel-openmp"
 
+RUN_CUDA=0
+CUDA_PATH="src/parallel-cuda"
+
+while [ "$#" -gt 0 ]
+do
+    case $1 in
+        --cuda )
+            RUN_CUDA=1
+        ;;
+	*)
+            echo "Unknown parameter passed: $1, discarding it"
+        ;;
+    esac
+    shift
+done
+
 check_exit_code () {
     if [ $? -ne 0 ]; then
         echo $1
@@ -27,7 +43,7 @@ cd $SEQUENTIAL_PATH
 meson builddir > /dev/null
 
 cd builddir/
-ninja
+ninja > /dev/null
 check_exit_code "Sequential project build failed!"
 
 echo "Running sequential project.."
@@ -42,7 +58,7 @@ cd $OPENMP_PATH
 meson builddir > /dev/null
 
 cd builddir/
-ninja
+ninja > /dev/null
 check_exit_code "OpenMP project build failed!"
 
 echo "Running OpenMP project.."
@@ -54,5 +70,22 @@ cd ../../../
 
 check_file_differ $SEQUENTIAL_PATH/builddir/$OUTPUT_FILE $OPENMP_PATH/builddir/$OUTPUT_FILE
 
+if [ $RUN_CUDA -eq 1 ]; then
+	echo "Building CUDA project.."
+	cd $CUDA_PATH
+	meson builddir > /dev/null
 
+	cd builddir/
+	ninja > /dev/null
+	check_exit_code "CUDA project build failed!"
+
+	echo "Running CUDA project.."
+	./histogram-equalizer-cuda $INPUT_FILEPATH $OUTPUT_FILE
+	check_exit_code "CUDA project run failed!"
+
+	# Go back to root folder
+	cd ../../../
+
+	check_file_differ $SEQUENTIAL_PATH/builddir/$OUTPUT_FILE $CUDA_PATH/builddir/$OUTPUT_FILE
+fi
 
