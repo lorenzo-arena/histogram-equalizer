@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "hsl.h"
 #include "log.h"
@@ -38,20 +39,64 @@ void histogram_calc(unsigned int *hist, float *lum, size_t img_size)
 
 void cdf_calc(unsigned int *cdf, unsigned int *buf, size_t buf_size)
 {
-    if(NULL == cdf)
+    #pragma omp single
     {
-        Throw(UNALLOCATED_MEMORY);
-    }
-    if(NULL == buf)
-    {
-        Throw(UNALLOCATED_MEMORY);
+        if(NULL == cdf)
+        {
+            Throw(UNALLOCATED_MEMORY);
+        }
+        if(NULL == buf)
+        {
+            Throw(UNALLOCATED_MEMORY);
+        }
     }
 
+#ifdef _OPENMP
+    // If the openmp version is compiled, apply the more inefficient
+    // but fast parallel scan algorithm
+#ifdef BETTER_SCAN
+    #pragma omp single
+    {
+        unsigned int *backup = NULL;
+        memcpy(cdf, buf, sizeof(unsigned int) * buf_size);
+
+        backup = malloc(sizeof(unsigned int) * buf_size);
+
+        if(NULL == backup)
+        {
+            Throw(UNALLOCATED_MEMORY);
+        }
+
+        for(unsigned int stride = 1; stride < buf_size; stride *= 2)
+        {
+            memcpy(backup, cdf, (sizeof(unsigned int) * buf_size) - (sizeof(unsigned int) * stride));
+
+            #pragma omp parallel for
+            for(int index = stride; index < buf_size; index++)
+            {
+                cdf[index] += backup[index - stride];
+            }
+        }
+
+        free(backup);
+    }
+#else
+    #pragma omp single
+    {
+        cdf[0] = buf[0];
+        for(unsigned int index = 1; index < buf_size; index++)
+        {
+            cdf[index] = cdf[index - 1] + buf[index];
+        }    
+    }
+#endif // BETTER_SCAN
+#else
     cdf[0] = buf[0];
     for(unsigned int index = 1; index < buf_size; index++)
     {
         cdf[index] = cdf[index - 1] + buf[index];
     }
+#endif // _OPENMP
 }
 
 int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **output)
@@ -156,8 +201,14 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
                 }
 
                 log_info("Starting cdf calculation..");
-                cdf_calc(cdf, histogram, N_BINS);
+            }
+            
+            cdf_calc(cdf, histogram, N_BINS);
 
+            // **************************************
+            // STEP 4 - compute the normalized cumulative distribution function
+            #pragma omp single
+            {
                 // Normalize the cdf so that it can be used as luminance
                 cdf_norm = calloc(N_BINS, sizeof(float));
 
@@ -169,8 +220,6 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
                 log_info("Starting normalized cdf calculation..");
             }
 
-            // **************************************
-            // STEP 4 - compute the normalized cumulative distribution function
             #pragma omp for
             for(unsigned int bin = 0; bin < N_BINS; bin++)
             {
