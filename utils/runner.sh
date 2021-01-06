@@ -21,9 +21,12 @@ OUTPUT_PATH="output.jpg"
 
 VERBOSE=0
 
+CHECK_TOTAL=0
+CHECK_STRING="Elapsed time:"
+
 usage () {
     echo "Usage:"
-    echo "utils/runner.sh -r|--repetitions [repetitions] (-s|--sequential)|(-o|--openmp)|(-c|--cuda) [-v|--verbose]"
+    echo "utils/runner.sh -r|--repetitions [repetitions] (-s|--sequential)|(-o|--openmp)|(-c|--cuda) [-v|--verbose] [-l|--total]"
     exit 1
 }
 
@@ -53,6 +56,9 @@ do
         -v | --verbose )
             VERBOSE=1
         ;;
+	-l | --total )
+            CHECK_TOTAL=1
+        ;;
         *)
             echo "Unknown parameter passed: $1, discarding it"
         ;;
@@ -62,6 +68,10 @@ done
 
 if [ $REPETITIONS -eq 0 ]; then
     usage
+fi
+
+if [ $CHECK_TOTAL -eq 1 ]; then
+	CHECK_STRING="Total elapsed time:"
 fi
 
 if [ $RUN_SEQUENTIAL -eq 1 ]; then
@@ -78,8 +88,8 @@ if [ $RUN_SEQUENTIAL -eq 1 ]; then
             echo "Running iteration $i.."
         fi
 
-        TIME=$(./$SEQUENTIAL_BIN $INPUT_PATH $OUTPUT_PATH -s | grep "Elapsed time:" | grep -Eo '[+-]?[0-9]+([.][0-9]+)?')
-        check_exit_code "Sequential project run failed!"
+	TIME=$(./$SEQUENTIAL_BIN $INPUT_PATH $OUTPUT_PATH -s | grep "$CHECK_STRING" | grep -Eo '[+-]?[0-9]+([.][0-9]+)?')
+	check_exit_code "Sequential project run failed!"
         TIMES+=($TIME)
     done
 
@@ -105,7 +115,7 @@ elif [ $RUN_OPENMP -eq 1 ]; then
             echo "Running iteration $i.."
         fi
 
-        TIME=$(./$OPENMP_BIN $INPUT_PATH $OUTPUT_PATH -s | grep "Elapsed time:" | grep -Eo '[+-]?[0-9]+([.][0-9]+)?')
+        TIME=$(./$OPENMP_BIN $INPUT_PATH $OUTPUT_PATH -s | grep "$CHECK_STRING" | grep -Eo '[+-]?[0-9]+([.][0-9]+)?')
         check_exit_code "OpenMP project run failed!"
         TIMES+=($TIME)
     done
@@ -132,7 +142,7 @@ elif [ $RUN_CUDA -eq 1 ]; then
             echo "Running iteration $i.."
         fi
 
-        TIME=$(./$CUDA_BIN $INPUT_PATH $OUTPUT_PATH -s | grep "Elapsed time:" | grep -Eo '[+-]?[0-9]+([.][0-9]+)?')
+        TIME=$(./$CUDA_BIN $INPUT_PATH $OUTPUT_PATH -s | grep "$CHECK_STRING" | grep -Eo '[+-]?[0-9]+([.][0-9]+)?')
         check_exit_code "CUDA project run failed!"
         TIMES+=($TIME)
     done
