@@ -39,7 +39,7 @@ int main(int argc, char **argv)
 
         argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-        rgb_image = stbi_load(arguments.args[0], &width, &height, &bpp, STBI_rgb);
+        rgb_image = stbi_load(arguments.args[0], &width, &height, &bpp, STBI_rgb_alpha);
 
         if(NULL == rgb_image)
         {
@@ -83,7 +83,7 @@ int main(int argc, char **argv)
         }
 
         log_info("Writing result in %s..", arguments.args[1]);
-        stbi_write_jpg(arguments.args[1], width, height, STBI_rgb, output_image, 100);
+        stbi_write_jpg(arguments.args[1], width, height, STBI_rgb_alpha, output_image, 100);
     } Catch(e) {
         log_error("Catched error %d!", e);
     }
