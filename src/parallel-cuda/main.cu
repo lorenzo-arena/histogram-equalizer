@@ -32,12 +32,19 @@ int main(int argc, char **argv)
     int width, height, bpp;
     uint8_t *rgb_image = NULL;
     uint8_t *output_image = NULL;
+    stopwatch_t processing_sw;
+    stopwatch_t total_sw;
     CEXCEPTION_T e;
 
     Try {
         set_default_arguments(&arguments);
 
         argp_parse(&argp, argc, argv, 0, 0, &arguments);
+
+        if(arguments.stopwatch)
+        {
+            stopwatch_start(&total_sw);
+        }
 
         rgb_image = stbi_load(arguments.args[0], &width, &height, &bpp, STBI_rgb_alpha);
 
@@ -54,7 +61,7 @@ int main(int argc, char **argv)
 
         if(arguments.stopwatch)
         {
-            stopwatch_start();
+            stopwatch_start(&processing_sw);
         }
 
         int res = equalize(rgb_image, width, height, &output_image);
@@ -73,9 +80,9 @@ int main(int argc, char **argv)
 
         if(arguments.stopwatch)
         {
-            stopwatch_stop();
+            stopwatch_stop(&processing_sw);
 
-            struct timespec elapsed = stopwatch_get_elapsed();
+            struct timespec elapsed = stopwatch_get_elapsed(&processing_sw);
 
             log_info("Elapsed time: %ld.%09ld",
                 elapsed.tv_sec,
@@ -84,6 +91,17 @@ int main(int argc, char **argv)
 
         log_info("Writing result in %s..", arguments.args[1]);
         stbi_write_jpg(arguments.args[1], width, height, STBI_rgb_alpha, output_image, 100);
+
+        if(arguments.stopwatch)
+        {
+            stopwatch_stop(&total_sw);
+
+            struct timespec elapsed = stopwatch_get_elapsed(&total_sw);
+
+            log_info("Total elapsed time: %ld.%09ld",
+                elapsed.tv_sec,
+                elapsed.tv_nsec);
+        }
     } Catch(e) {
         log_error("Catched error %d!", e);
     }
