@@ -17,7 +17,7 @@ typedef struct {
     unsigned char r;
     unsigned char g;
     unsigned char b;
-    unsigned char dummy;
+    unsigned char a;
 } rgb_pixel_t;
 
 

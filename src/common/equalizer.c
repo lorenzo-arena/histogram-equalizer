@@ -154,13 +154,7 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
             {
                 for(unsigned int y = 0; y < width; y++)
                 {
-                    uint8_t *pixel_offset = input + (((width * x) + y) * 3);
-
-                    rgb_pixel_t rgb_pixel = {
-                        .r = pixel_offset[0],
-                        .g = pixel_offset[1],
-                        .b = pixel_offset[2]
-                    };
+                    rgb_pixel_t rgb_pixel = *(rgb_pixel_t *)(input + (((width * x) + y) * 4));
 
                     hsl_pixel_t hsl_pixel = { .h = 0, .s = 0, .l = 0 };
 
@@ -242,7 +236,7 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
             #pragma omp single
             {
                 // Convert back to rgb and save the image
-                *output = calloc(width * height * 3, sizeof(uint8_t));
+                *output = calloc(width * height * 4, sizeof(uint8_t));
                 
                 if(NULL == (*output))
                 {
@@ -257,9 +251,9 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
             {
                 for(unsigned int y = 0; y < width; y++)
                 {
-                    uint8_t *pixel_offset = (*output) + (((width * x) + y) * 3);
+                    uint8_t *pixel_offset = (*output) + (((width * x) + y) * 4);
 
-                    rgb_pixel_t rgb_pixel = { .r = 0, .g = 0, .b = 0 };
+                    rgb_pixel_t rgb_pixel = { .r = 0, .g = 0, .b = 0, .a = 0xFF };
 
                     hsl_pixel_t hsl_pixel = {
                         .h = hsl_image.h[(width * x) + y],
@@ -269,9 +263,7 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
 
                     hsl_to_rgb(hsl_pixel, &rgb_pixel);
 
-                    pixel_offset[0] = rgb_pixel.r;
-                    pixel_offset[1] = rgb_pixel.g;
-                    pixel_offset[2] = rgb_pixel.b;
+                    memcpy(pixel_offset, &rgb_pixel, sizeof(rgb_pixel_t));
                 }
             }
         }
