@@ -17,14 +17,8 @@ void histogram_calc(unsigned int *hist, float *lum, size_t img_size)
 {
     #pragma omp single
     {
-        if(NULL == hist)
-        {
-            Throw(UNALLOCATED_MEMORY);
-        }
-        if(NULL == lum)
-        {
-            Throw(UNALLOCATED_MEMORY);
-        }
+        check_pointer(hist);
+        check_pointer(lum);
     }
 
     #pragma omp for
@@ -41,14 +35,8 @@ void cdf_calc(unsigned int *cdf, unsigned int *buf, size_t buf_size)
 {
     #pragma omp single
     {
-        if(NULL == cdf)
-        {
-            Throw(UNALLOCATED_MEMORY);
-        }
-        if(NULL == buf)
-        {
-            Throw(UNALLOCATED_MEMORY);
-        }
+        check_pointer(cdf);
+        check_pointer(buf);
     }
 
 #ifdef _OPENMP
@@ -62,10 +50,7 @@ void cdf_calc(unsigned int *cdf, unsigned int *buf, size_t buf_size)
 
         backup = malloc(sizeof(unsigned int) * buf_size);
 
-        if(NULL == backup)
-        {
-            Throw(UNALLOCATED_MEMORY);
-        }
+        check_pointer(backup);
 
         for(unsigned int stride = 1; stride < buf_size; stride *= 2)
         {
@@ -87,7 +72,7 @@ void cdf_calc(unsigned int *cdf, unsigned int *buf, size_t buf_size)
         for(unsigned int index = 1; index < buf_size; index++)
         {
             cdf[index] = cdf[index - 1] + buf[index];
-        }    
+        }
     }
 #endif // BETTER_SCAN
 #else
@@ -114,34 +99,16 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
     float *cdf_norm = NULL;
 
     Try {
-        if(NULL == input)
-        {
-            Throw(UNALLOCATED_MEMORY);
-        }
-
-        if(NULL == output)
-        {
-            Throw(UNALLOCATED_MEMORY);
-        }
+        check_pointer(input);
+        check_pointer(output);
 
         hsl_image.h = calloc(width * height, sizeof(int));
         hsl_image.s = calloc(width * height, sizeof(float));
         hsl_image.l = calloc(width * height, sizeof(float));
 
-        if(NULL == hsl_image.h)
-        {
-            Throw(UNALLOCATED_MEMORY);
-        }
-
-        if(NULL == hsl_image.s)
-        {
-            Throw(UNALLOCATED_MEMORY);
-        }
-
-        if(NULL == hsl_image.l)
-        {
-            Throw(UNALLOCATED_MEMORY);
-        }
+        check_pointer(hsl_image.h);
+        check_pointer(hsl_image.s);
+        check_pointer(hsl_image.l);
 
         #pragma omp parallel \
             num_threads(arguments.threads) \
@@ -173,10 +140,7 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
                 // Calculate the histogram by multiplying the luminance by N_BINS - 1
                 histogram = calloc(N_BINS, sizeof(unsigned int));
 
-                if(NULL == histogram)
-                {
-                    Throw(UNALLOCATED_MEMORY);
-                }
+                check_pointer(histogram);
 
                 log_info("Starting histogram calculation..");
             }
@@ -190,14 +154,11 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
                 // Calculate the cdf
                 cdf = calloc(N_BINS, sizeof(unsigned int));
 
-                if(NULL == cdf)
-                {
-                    Throw(UNALLOCATED_MEMORY);
-                }
+                check_pointer(cdf);
 
                 log_info("Starting cdf calculation..");
             }
-            
+
             cdf_calc(cdf, histogram, N_BINS);
 
             // **************************************
@@ -207,10 +168,7 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
                 // Normalize the cdf so that it can be used as luminance
                 cdf_norm = calloc(N_BINS, sizeof(float));
 
-                if(NULL == cdf_norm)
-                {
-                    Throw(UNALLOCATED_MEMORY);
-                }
+                check_pointer(cdf_norm);
 
                 log_info("Starting normalized cdf calculation..");
             }
@@ -237,11 +195,8 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
             {
                 // Convert back to rgb and save the image
                 *output = calloc(width * height * 4, sizeof(uint8_t));
-                
-                if(NULL == (*output))
-                {
-                    Throw(UNALLOCATED_MEMORY);
-                }
+
+                check_pointer(*output);
             }
 
             // **************************************
@@ -268,7 +223,6 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
             }
         }
 
-
         if(arguments.log_histogram)
         {
             log_info("Printing histogram..");
@@ -294,10 +248,8 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
         {
             // Compute the post processed image histogram
             unsigned int *pp_histogram = calloc(N_BINS, sizeof(unsigned int));
-            if(NULL == pp_histogram)
-            {
-                Throw(UNALLOCATED_MEMORY);
-            }
+
+            check_pointer(pp_histogram);
 
             log_info("Starting post processed histogram calculation..");
             histogram_calc(pp_histogram, hsl_image.l, width * height);

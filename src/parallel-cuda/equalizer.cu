@@ -166,10 +166,7 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
         // Allocate memory for the output
         *output = (uint8_t *)calloc(4 * width * height, sizeof(uint8_t));
 
-        if(NULL == (*output))
-        {
-            Throw(UNALLOCATED_MEMORY);
-        }
+        check_pointer(*output);
 
         gpuErrorCheck( cudaMalloc((void**)&d_output_image, 4 * width * height * sizeof(uint8_t)) );
 
@@ -221,20 +218,9 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
             h_cdf = (unsigned int *)calloc(N_BINS, sizeof(unsigned int));
             h_cdf_norm = (float *)calloc(N_BINS, sizeof(float));
 
-            if(NULL == h_histogram)
-            {
-                Throw(UNALLOCATED_MEMORY);
-            }
-
-            if(NULL == h_cdf)
-            {
-                Throw(UNALLOCATED_MEMORY);
-            }
-
-            if(NULL == h_cdf_norm)
-            {
-                Throw(UNALLOCATED_MEMORY);
-            }
+            check_pointer(h_histogram);
+            check_pointer(h_cdf);
+            check_pointer(h_cdf_norm);
 
             gpuErrorCheck( cudaMemcpy(h_histogram, d_histogram, N_BINS * sizeof(unsigned int), cudaMemcpyDeviceToHost) );
             gpuErrorCheck( cudaMemcpy(h_cdf, d_cdf, N_BINS * sizeof(unsigned int), cudaMemcpyDeviceToHost) );
