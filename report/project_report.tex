@@ -1,0 +1,94 @@
+\documentclass[10pt,twocolumn,letterpaper]{article}
+
+\usepackage{cvpr}
+\usepackage{times}
+\usepackage{epsfig}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\usepackage{url}
+
+% Include other packages here, before hyperref.
+
+% If you comment hyperref and then uncomment it, you should delete
+% egpaper.aux before re-running latex.  (Or just hit 'q' on the first latex
+% run, let it finish, and you should be clear).
+%\usepackage[pagebackref=true,breaklinks=true,letterpaper=true,colorlinks,bookmarks=false]{hyperref}
+
+\cvprfinalcopy % *** Uncomment this line for the final submission
+
+\def\cvprPaperID{****} % *** Enter the CVPR Paper ID here
+\def\httilde{\mbox{\tt\raisebox{-.5ex}{\symbol{126}}}}
+
+% Pages are numbered in submission mode, and unnumbered in camera-ready
+\ifcvprfinal\pagestyle{empty}\fi
+\begin{document}
+
+%%%%%%%%% TITLE
+\title{PC-2020/21 Histogram Equalization}
+
+\author{Lorenzo Arena\\
+{\tt\small lorenzo.arena@stud.unifi.it}
+}
+
+\maketitle
+\thispagestyle{empty}
+
+%%%%%%%%% ABSTRACT
+\begin{abstract}
+    This project was made as the final work for the “Parallel Programming”
+    exam at the University of Florence. The objective was to create three
+    version of a software to equalize the histogram of a given JPEG image.
+    The first version had to be implemented as a sequential program, while
+    the other two had to be parallel; for the parallel versions one has
+    been implemented using OpenMP on top of the already implemented sequential
+    code and the other is built using CUDA to take advantage of a GPU computing
+    power. The projects has been developed in C on a Ubuntu machine; all
+    tests were made on a Ryzen 7 1700 CPU and a NVIDIA Quadro P2000.
+ \end{abstract}
+
+ %%%%%%%%% BODY TEXT
+\noindent\large\textbf{Future Distribution Permission}\\
+\indent The author(s) of this report give permission for this document to be
+        distributed to Unifi-affiliated students taking future courses.
+
+\section{The algorithm}
+
+%%%%%%%%%% TO WRITE
+%% https://en.wikipedia.org/wiki/Histogram_equalization
+Histogram equalization in image processing can be used to increase an image's
+contrast. This is accomplished by spreading the most frequent intensities
+values across the whole histogram. It works especially well on images which
+presents foreground and background which are both dark or both bright.
+
+\subsection{implementation}
+
+We can start by considering a grayscale image of \(n\) pixels, in which \(n_i\) is the number
+of occurrences of gray level \(i\). The probability of an occurrance of a
+pixel of level \(i\) in the image is:
+
+\[ p_x(i) = \frac{n_i}{n} \]
+
+\section{The sequential implementation}
+
+%%%%%%%%%% TO WRITE
+
+\section{The OpenMP implementation}
+
+%%%%%%%%%% TO WRITE
+
+\section{The CUDA implementation}
+
+%%%%%%%%%% TO WRITE
+
+\section{Results}
+
+%%%%%%%%%% TO WRITE
+
+{\small
+\bibliographystyle{ieee}
+\bibliography{egbib}
+}
+
+\end{document}
