@@ -13,6 +13,10 @@
 #include "errors.h"
 #include "defines.h"
 
+#ifdef TRACE_STEP_TIMES
+#include "stopwatch.h"
+#endif
+
 void histogram_calc(unsigned int *hist, float *lum, size_t img_size)
 {
     #pragma omp single
@@ -88,6 +92,10 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
 {
     CEXCEPTION_T e = NO_ERROR;
 
+#ifdef TRACE_STEP_TIMES
+    stopwatch_t stopwatch;
+#endif
+
     hsl_image_t hsl_image = {
         .h = NULL,
         .s = NULL,
@@ -116,6 +124,14 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
         {
             // **************************************
             // STEP 1 - convert every pixel from RGB to HSL
+#ifdef TRACE_STEP_TIMES
+            #pragma omp single
+            {
+                stopwatch_start(&stopwatch);
+            }
+#endif
+            // **************************************
+            // STEP 1 - convert every pixel from RGB to HSL
             #pragma omp for collapse(2)
             for(unsigned int x = 0; x < height; x++)
             {
@@ -133,6 +149,21 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
                 }
             }
 
+#ifdef TRACE_STEP_TIMES
+            #pragma omp single
+            {
+                stopwatch_stop(&stopwatch);
+
+                struct timespec elapsed = stopwatch_get_elapsed(&stopwatch);
+
+                log_info("Step 1 time: %ld.%09ld",
+                    elapsed.tv_sec,
+                    elapsed.tv_nsec);
+                
+                stopwatch_start(&stopwatch);
+            }
+#endif
+
             // **************************************
             // STEP 2 - compute the histogram of the luminance for each pixel
             #pragma omp single
@@ -147,6 +178,21 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
 
             histogram_calc(histogram, hsl_image.l, width * height);
 
+#ifdef TRACE_STEP_TIMES
+            #pragma omp single
+            {
+                stopwatch_stop(&stopwatch);
+
+                struct timespec elapsed = stopwatch_get_elapsed(&stopwatch);
+
+                log_info("Step 2 time: %ld.%09ld",
+                    elapsed.tv_sec,
+                    elapsed.tv_nsec);
+                
+                stopwatch_start(&stopwatch);
+            }
+#endif
+
             // **************************************
             // STEP 3 - compute the cumulative distribution function
             #pragma omp single
@@ -160,6 +206,21 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
             }
 
             cdf_calc(cdf, histogram, N_BINS);
+
+#ifdef TRACE_STEP_TIMES
+            #pragma omp single
+            {
+                stopwatch_stop(&stopwatch);
+
+                struct timespec elapsed = stopwatch_get_elapsed(&stopwatch);
+
+                log_info("Step 3 time: %ld.%09ld",
+                    elapsed.tv_sec,
+                    elapsed.tv_nsec);
+                
+                stopwatch_start(&stopwatch);
+            }
+#endif
 
             // **************************************
             // STEP 4 - compute the normalized cumulative distribution function
@@ -179,6 +240,21 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
                 cdf_norm[bin] = (float)(cdf[bin] - cdf[0]) / ((width * height) - cdf[0]) * (N_BINS - 1);
             }
 
+#ifdef TRACE_STEP_TIMES
+            #pragma omp single
+            {
+                stopwatch_stop(&stopwatch);
+
+                struct timespec elapsed = stopwatch_get_elapsed(&stopwatch);
+
+                log_info("Step 4 time: %ld.%09ld",
+                    elapsed.tv_sec,
+                    elapsed.tv_nsec);
+                
+                stopwatch_start(&stopwatch);
+            }
+#endif
+
             // **************************************
             // STEP 5 - apply the normalized CDF to the luminance for each pixel
             #pragma omp for collapse(2)
@@ -190,6 +266,21 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
                     hsl_image.l[(width * x) + y] = cdf_norm[(unsigned int)roundf(hsl_image.l[(width * x) + y] * (N_BINS - 1))] / (N_BINS - 1);
                 }
             }
+
+#ifdef TRACE_STEP_TIMES
+            #pragma omp single
+            {
+                stopwatch_stop(&stopwatch);
+
+                struct timespec elapsed = stopwatch_get_elapsed(&stopwatch);
+
+                log_info("Step 5 time: %ld.%09ld",
+                    elapsed.tv_sec,
+                    elapsed.tv_nsec);
+                
+                stopwatch_start(&stopwatch);
+            }
+#endif
 
             #pragma omp single
             {
@@ -221,6 +312,21 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
                     memcpy(pixel_offset, &rgb_pixel, sizeof(rgb_pixel_t));
                 }
             }
+
+#ifdef TRACE_STEP_TIMES
+            #pragma omp single
+            {
+                stopwatch_stop(&stopwatch);
+
+                struct timespec elapsed = stopwatch_get_elapsed(&stopwatch);
+
+                log_info("Step 6 time: %ld.%09ld",
+                    elapsed.tv_sec,
+                    elapsed.tv_nsec);
+                
+                stopwatch_start(&stopwatch);
+            }
+#endif
         }
 
         if(arguments.log_histogram)

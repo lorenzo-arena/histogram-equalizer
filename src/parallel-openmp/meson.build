@@ -13,6 +13,7 @@ sources = ['../sequential/main.c',
            '../common/cexception/lib/CException.c']
 
 #add_global_arguments('-DBETTER_SCAN', language : 'c')
+add_global_arguments('-DTRACE_STEP_TIMES', language : 'c')
 
 cc = meson.get_compiler('c')
 libgomp = cc.find_library('gomp')
