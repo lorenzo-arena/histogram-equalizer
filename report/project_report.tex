@@ -64,11 +64,36 @@ presents foreground and background which are both dark or both bright.
 
 \subsection{implementation}
 
-We can start by considering a grayscale image of \(n\) pixels, in which \(n_i\) is the number
-of occurrences of gray level \(i\). The probability of an occurrance of a
-pixel of level \(i\) in the image is:
+We can start by considering a grayscale image of \(n\) pixels, in which \(n_i\)
+is the number of occurrences of gray level \(i\). The probability of an occurrance
+of a pixel of level \(i\) (with \(0 < i < L\)) in the image is:
 
 \[ p_x(i) = \frac{n_i}{n} \]
+
+The histogram is the distribution of the pixel levels in the range \([0, L - 1]\).
+
+We can define the \emph{cumulative distribution function} as the cumulative sum
+of all the probabilities lying in its domain:
+
+\[ cdf_x(i) = \sum_{j=0}^{i} p_x(x = j) \]
+
+To get a linearized \(cdf\), which will produce a flatten histogram, we must
+normalize the is to the \([0, L - 1]\) range by using the following formula:
+
+\[ cdfn_x(i) = \frac{cdf(i) - cdf_{min}}{(M * N) - cdf_{min}} \]
+
+where \(M\) and \(N\) are the image's dimensions. The normalized \(cdf\) must
+then be applied to the original histgram:
+
+\[ h(v) = round(cdfn_x(i) * (L - 1)) \]
+
+While this can be applied to grayscale images by using the pixel value, for
+color images applying the equalization process to the R, G and B channels would
+break the image's color balance since the relative distribution of the color
+channels would be changed. Thus, the pixels must be converted to another color
+space (like HSL) where the algorithm can be applied to the \emph{luminance}
+channel without creating changes in the \emph{hue} or \emph{saturation}
+channels.
 
 \section{The sequential implementation}
 
