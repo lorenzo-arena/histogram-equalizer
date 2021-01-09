@@ -24,9 +24,11 @@ VERBOSE=0
 CHECK_TOTAL=0
 CHECK_STRING="Elapsed time:"
 
+BIG_IMAGE=0
+
 usage () {
     echo "Usage:"
-    echo "utils/runner.sh -r|--repetitions [repetitions] (-s|--sequential)|(-o|--openmp)|(-c|--cuda) [-v|--verbose] [-l|--total]"
+    echo "utils/runner.sh -r|--repetitions [repetitions] (-s|--sequential)|(-o|--openmp)|(-c|--cuda) [-v|--verbose] [-l|--total] [-b|--big]"
     exit 1
 }
 
@@ -59,6 +61,9 @@ do
 	-l | --total )
             CHECK_TOTAL=1
         ;;
+        -b | --big)
+            BIG_IMAGE=1
+        ;;
         *)
             echo "Unknown parameter passed: $1, discarding it"
         ;;
@@ -73,6 +78,11 @@ fi
 if [ $CHECK_TOTAL -eq 1 ]; then
 	CHECK_STRING="Total elapsed time:"
 fi
+
+if [ $BIG_IMAGE -eq 1 ]; then
+        INPUT_PATH="../../../assets/pic_low_contrast_big.jpg"
+fi
+
 
 if [ $RUN_SEQUENTIAL -eq 1 ]; then
     cd $SEQUENTIAL_PATH
