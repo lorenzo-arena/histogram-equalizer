@@ -8,6 +8,7 @@
 \usepackage{amssymb}
 
 \usepackage{url}
+\usepackage{hyperref}
 
 % Include other packages here, before hyperref.
 
@@ -45,7 +46,8 @@
     been implemented using OpenMP on top of the already implemented sequential
     code and the other is built using CUDA to take advantage of a GPU computing
     power. The projects has been developed in C on a Ubuntu machine; all
-    tests were made on a Ryzen 7 1700 CPU and a NVIDIA Quadro P2000.
+    tests were made on a Ryzen 7 1700 CPU and a NVIDIA Quadro P2000. The project
+    is hosted on GitHub at \url{https://github.com/lorenzo-arena/histogram-equalizer}.
  \end{abstract}
 
  %%%%%%%%% BODY TEXT
@@ -62,7 +64,7 @@ contrast. This is accomplished by spreading the most frequent intensities
 values across the whole histogram. It works especially well on images which
 presents foreground and background which are both dark or both bright.
 
-\subsection{implementation}
+\subsection{Implementation}
 
 We can start by considering a grayscale image of \(n\) pixels, in which \(n_i\)
 is the number of occurrences of gray level \(i\). The probability of an occurrance
@@ -95,9 +97,57 @@ space (like HSL) where the algorithm can be applied to the \emph{luminance}
 channel without creating changes in the \emph{hue} or \emph{saturation}
 channels.
 
+\subsection{On HSL color space}
+
+HSL (\emph{hue}, \emph{saturation}, \emph{lightness}) is an alternative
+representation of the RGB color space. Instead of describing colors by
+using the red, green and blue components, it works by using a cylindrical
+geometry where hue (the angular dimension) gives the description of the
+perceived color (starting from red at 0°, green at 120° and blue at 240°).
+Saturation describes the "colorfulness" of the color, giving the "pure color"
+at value 1, at the edge of the cilinder, while turning to grayscale as the center
+of the cilinder is approached. Lightness is used as the vertical axis dimension
+and ranges from pure white (lightness 1) to pure black (lightness 0).
+
+\begin{figure}[!ht]
+    \centering 
+    \includegraphics[width=0.8\linewidth]{./img/hsl.png}
+    \caption{The HSL cilinder}
+    \label{fig:hsl}
+\end{figure}
+
 \section{The sequential implementation}
 
-%%%%%%%%%% TO WRITE
+The sequential solution was implemented by applying one by one all the algorithm
+steps to an image which filename can be read from the command line when running
+the program. The histogram is computed in 512 \emph{bins} for the luminance; by
+using a special command line option it can also be printed out using \emph{gnuplot}.
+The benchmarks have been made using \verb|clock_gettime| with \verb|CLOCK_MONOTONIC|,
+both for getting a measure of the complete execution time (including image reading
+from disk and output writing to disk) and for measuring the algorithm execution time.
+The function to convert RGB pixels to HSL color space and viceversa has been
+implemented following the process reported in \cite{wiki:HSL_and_HSV} under the
+sections "\emph{From RGB}" and "\emph{To RGB}".
+
+The tests were done on an image with low contrast, showed in Figure \ref{fig:input}.
+
+\begin{figure}[!ht]
+    \centering 
+    \includegraphics[width=0.8\linewidth]{../assets/pic_low_contrast.jpg}
+    \caption{The test input image}
+    \label{fig:input}
+\end{figure}
+
+The output after the equalization process is showed in Figure \ref{fig:output}.
+The contrast has been increased, making the borders more clear while also darkening
+the low lights on the animal body and lightening the high lights of the clouds.
+
+\begin{figure}[!ht]
+    \centering 
+    \includegraphics[width=0.8\linewidth]{./img/output.jpg}
+    \caption{The output image after the equalization process}
+    \label{fig:output}
+\end{figure}
 
 \section{The OpenMP implementation}
 
@@ -111,9 +161,10 @@ channels.
 
 %%%%%%%%%% TO WRITE
 
-{\small
+\newpage
+
+\nocite{*}
+\bibliography{project_report.bib} 
 \bibliographystyle{ieee}
-\bibliography{egbib}
-}
 
 \end{document}
