@@ -151,7 +151,29 @@ the low lights on the animal body and lightening the high lights of the clouds.
 
 \section{The OpenMP implementation}
 
-%%%%%%%%%% TO WRITE
+\emph{OpenMP} is an API consisting of a set of compiler directives, libraries and
+environment variables which can be used to develop parallel applications. It uses
+a \emph{fork-join} model, where a primary thread forks a number of sub-threads and
+divides a task between them. Each section of the code which is meant to be run in
+a parallel fashion must be marked with a specific compiler directive; during the
+execution each thread can get its \emph{id}, an integer which univocally identifies
+it, with the function \verb|omp_get_thread_num|. Each thread executes the parallel
+section independently, however there are a number of directives which allow
+work sharing between threads, so that each one executes its allocated piece of work.
+At the start of the program a thread pool is generated using the directive
+\verb|#pragma omp parallel| (with a clause, or an option, to specify which variables
+should be shared between the threads). Then, for each of the \verb|for| loops the
+directive \verb|#pragma omp for| is used to split the work between the threads.
+During the execution the directive \verb|#pragma omp single| is used to be sure that
+only one thread executes memory allocations and other specific instructions.
+Most of the equalization algorithm steps can be parallelized this way; the only exception
+is the calculation of the cumulative distribution function, which is calculated from
+a single thread.
+
+The option \verb|-t| can be used when starting the OpenMP version of the program
+to specify the number of threads which shall be used when performing the equalization.
+By using that options some measures have been taken: the Figure \ref{fig:openmp}
+shows the speedup of this implementation.
 
 \section{The CUDA implementation}
 
