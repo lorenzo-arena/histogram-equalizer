@@ -26,9 +26,12 @@ CHECK_STRING="Elapsed time:"
 
 BIG_IMAGE=0
 
+THREADS=0
+USE_THREADS=0
+
 usage () {
     echo "Usage:"
-    echo "utils/runner.sh -r|--repetitions [repetitions] (-s|--sequential)|(-o|--openmp)|(-c|--cuda) [-v|--verbose] [-l|--total] [-b|--big]"
+    echo "utils/runner.sh -r|--repetitions [repetitions] (-s|--sequential)|(-o|--openmp)|(-c|--cuda) [-v|--verbose] [-l|--total] [-b|--big] [-t|--threads]"
     exit 1
 }
 
@@ -63,6 +66,11 @@ do
         ;;
         -b | --big)
             BIG_IMAGE=1
+        ;;
+        -t | --threads)
+            USE_THREADS=1
+            THREADS=$2
+            shift
         ;;
         *)
             echo "Unknown parameter passed: $1, discarding it"
@@ -125,7 +133,13 @@ elif [ $RUN_OPENMP -eq 1 ]; then
             echo "Running iteration $i.."
         fi
 
-        TIME=$(./$OPENMP_BIN $INPUT_PATH $OUTPUT_PATH -s | grep "$CHECK_STRING" | grep -Eo '[+-]?[0-9]+([.][0-9]+)?')
+        THREADS_OPT=""
+
+        if [ $USE_THREADS -eq 1 ]; then
+            THREADS_OPT="-t $THREADS"
+        fi
+
+        TIME=$(./$OPENMP_BIN $INPUT_PATH $OUTPUT_PATH -s $THREADS_OPT | grep "$CHECK_STRING" | grep -Eo '[+-]?[0-9]+([.][0-9]+)?')
         check_exit_code "OpenMP project run failed!"
         TIMES+=($TIME)
     done
