@@ -172,8 +172,16 @@ a single thread.
 
 The option \verb|-t| can be used when starting the OpenMP version of the program
 to specify the number of threads which shall be used when performing the equalization.
-By using that options some measures have been taken: the Figure \ref{fig:openmp}
+By using that options some measures have been taken: the Figure \ref{fig:openmp-speedup}
 shows the speedup of this implementation.
+
+\begin{figure*}
+\begin{center}
+\includegraphics[width=1.0\linewidth]{./img/omp-speedup.png}
+\end{center}
+    \caption{The OpenMP implementation speedup}
+\label{fig:openmp-speedup}
+\end{figure*}
 
 \section{The CUDA implementation}
 
