@@ -185,7 +185,15 @@ shows the speedup of this implementation.
 
 \section{The CUDA implementation}
 
-%%%%%%%%%% TO WRITE
+The second parallel version of the software has been implemented using CUDA, thus being
+able to take full advantage of a GPU computing power. The first approach was to transpose
+each step of the algorithm to be run on the GPU; a \emph{kernel} (a routine compiled to be
+executed on the GPU) has been implemented for each one of the equalization steps.
+One of the first optimizations was related to the histogram computation: since there could
+be potentially houndreds of threads writing to the same memory locations (that is, when
+incrementing a "bin"), \emph{atomic} operations like \verb|atomicAdd| has been used; each
+thread \emph{block} also works on a separate piece of memory, reducing the risk of collisions.
+After some tests it has been chosen to use 30 \emph{blocks} of 512 threads each.
 
 \section{Results}
 
