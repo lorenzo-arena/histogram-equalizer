@@ -1,7 +1,6 @@
 #include "equalizer.cuh"
 
 #include "error_checker.cuh"
-#include "hsl.cuh"
 
 extern "C" {
     #include <stdio.h>
@@ -12,7 +11,7 @@ extern "C" {
     #include "defines.h"
 }
 
-#define BLOCK_SIZE 512
+#define BLOCK_SIZE (512)
 
 __global__ void compute_histogram(const float *image,
                                   unsigned int *bins,
@@ -41,7 +40,7 @@ __global__ void compute_histogram(const float *image,
     }
 }
 
-__global__ void convert_rgb_to_hsl(const uint8_t *rgb_image,
+__global__ void convert_rgb_to_hsl(const rgb_pixel_t *rgb_image,
                                    hsl_image_t hsl_image,
                                    unsigned int num_elements)
 {
@@ -49,7 +48,7 @@ __global__ void convert_rgb_to_hsl(const uint8_t *rgb_image,
 
     if(tid < num_elements)
     {
-        const rgb_pixel_t rgb_pixel = *(rgb_pixel_t *)(&rgb_image[tid * 4]);
+        const rgb_pixel_t rgb_pixel = *(rgb_pixel_t *)(&rgb_image[tid]);
 
         hsl_pixel_t hsl_pixel = { .h = 0, .s = 0, .l = 0 };
 
@@ -62,14 +61,14 @@ __global__ void convert_rgb_to_hsl(const uint8_t *rgb_image,
 }
 
 __global__ void convert_hsl_to_rgb(const hsl_image_t hsl_image,
-                                   uint8_t *rgb_image,
+                                   rgb_pixel_t *rgb_image,
                                    unsigned int num_elements)
 {
     unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     if(tid < num_elements)
     {
-        uint8_t *pixel_offset = &rgb_image[tid * 4];
+        rgb_pixel_t *pixel_offset = &rgb_image[tid];
 
         rgb_pixel_t rgb_pixel = { .r = 0, .g = 0, .b = 0, .a = 0xFF };
 
@@ -81,10 +80,10 @@ __global__ void convert_hsl_to_rgb(const hsl_image_t hsl_image,
 
         hsl_to_rgb(hsl_pixel, &rgb_pixel);
 
-        pixel_offset[0] = rgb_pixel.r;
-        pixel_offset[1] = rgb_pixel.g;
-        pixel_offset[2] = rgb_pixel.b;
-        pixel_offset[3] = rgb_pixel.a;
+        pixel_offset->r = rgb_pixel.r;
+        pixel_offset->g = rgb_pixel.g;
+        pixel_offset->b = rgb_pixel.b;
+        pixel_offset->a = rgb_pixel.a;
     }
 }
 
@@ -136,14 +135,14 @@ __global__ void apply_normalized_cdf(const float *cdf_norm, const hsl_image_t hs
     }
 }
 
-int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **output)
+int equalize(rgb_pixel_t *input, unsigned int width, unsigned int height, uint8_t **output)
 {
     CEXCEPTION_T e = NO_ERROR;
 
     int blocksPerGrid = 0;
 
-    uint8_t *d_rgb_image = NULL;
-    uint8_t *d_output_image = NULL;
+    rgb_pixel_t *d_rgb_image = NULL;
+    rgb_pixel_t *d_output_image = NULL;
     unsigned int *d_histogram = NULL;
     unsigned int *d_cdf = NULL;
     float *d_cdf_norm = NULL;
@@ -156,19 +155,19 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
 
     Try {
         // Allocate memory for the image on the device
-        gpuErrorCheck( cudaMalloc((void**)&d_rgb_image, 4 * width * height * sizeof(uint8_t)) );
-        gpuErrorCheck( cudaMemcpy(d_rgb_image, input, 4 * width * height, cudaMemcpyHostToDevice) );
+        gpuErrorCheck( cudaMalloc((void**)&d_rgb_image, width * height * sizeof(rgb_pixel_t)) );
+        gpuErrorCheck( cudaMemcpy(d_rgb_image, input, width * height * sizeof(rgb_pixel_t), cudaMemcpyHostToDevice) );
 
         gpuErrorCheck( cudaMalloc((void**)&(d_hsl_image.h), width * height * sizeof(int)) );
         gpuErrorCheck( cudaMalloc((void**)&(d_hsl_image.s), width * height * sizeof(float)) );
         gpuErrorCheck( cudaMalloc((void**)&(d_hsl_image.l), width * height * sizeof(float)) );
 
         // Allocate memory for the output
-        *output = (uint8_t *)calloc(4 * width * height, sizeof(uint8_t));
+        *output = (uint8_t *)calloc(width * height, sizeof(rgb_pixel_t));
 
         check_pointer(*output);
 
-        gpuErrorCheck( cudaMalloc((void**)&d_output_image, 4 * width * height * sizeof(uint8_t)) );
+        gpuErrorCheck( cudaMalloc((void**)&d_output_image, width * height * sizeof(rgb_pixel_t)) );
 
         gpuErrorCheck( cudaMalloc((void**)&d_histogram, N_BINS * sizeof(unsigned int)) );
         gpuErrorCheck( cudaMalloc((void**)&d_cdf, N_BINS * sizeof(unsigned int)) );
@@ -206,7 +205,7 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
         convert_hsl_to_rgb<<<blocksPerGrid, BLOCK_SIZE>>>(d_hsl_image, d_output_image, width * height);
 
         // Copy the result back from the device
-        gpuErrorCheck( cudaMemcpy(*output, d_output_image, 4 * width * height, cudaMemcpyDeviceToHost) );
+        gpuErrorCheck( cudaMemcpy(*output, d_output_image, width * height * sizeof(rgb_pixel_t), cudaMemcpyDeviceToHost) );
 
         if(arguments.log_histogram)
         {

@@ -5,6 +5,8 @@ extern "C" {
     #include <stdint.h>
 }
 
-int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **output);
+#include "hsl.cuh"
+
+int equalize(rgb_pixel_t *input, unsigned int width, unsigned int height, uint8_t **output);
 
 #endif

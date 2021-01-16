@@ -17,6 +17,7 @@ extern "C" {
     #include "errors.h"
 }
 
+#include "hsl.cuh"
 #include "equalizer.cuh"
 
 struct arguments arguments;
@@ -64,7 +65,7 @@ int main(int argc, char **argv)
             stopwatch_start(&processing_sw);
         }
 
-        int res = equalize(rgb_image, width, height, &output_image);
+        int res = equalize((rgb_pixel_t *)rgb_image, width, height, &output_image);
 
         if(cudaSuccess != res)
         {
