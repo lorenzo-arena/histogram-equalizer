@@ -197,7 +197,20 @@ After some tests it has been chosen to use 30 \emph{blocks} of 512 threads each.
 
 \section{Results}
 
-%%%%%%%%%% TO WRITE
+By using some utility scripts (which can be found in the repository) both for verifying
+the correctness of the different solutions and to run them with different thread counts
+(for the OpenMP implementation) or different input images, the following results are found:
+
+\begin{itemize}
+    \item the OpenMP implementation provides a good speedup over the sequential implementation;
+          however, that stops getting better when the thread count is above the core count on
+          which it is executed (or the virtual thread count in case of \emph{Simultaneous
+          multithreading} enabled CPUs)
+    \item for small images (under 6MP) the CUDA implementation provides a lot more speedup
+          than the OpenMP solution run at the most efficient thread count; however, when images
+          get bigger, the overhead due to the data transfer from the host the device and
+          viceversa slightly dimish that speedup (while being still really good)
+\end{itemize}
 
 \newpage
 
