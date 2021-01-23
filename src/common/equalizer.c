@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "hsl.h"
 #include "log.h"
@@ -10,21 +11,18 @@
 #include "equalizer.h"
 #include "cexception/lib/CException.h"
 #include "errors.h"
+#include "defines.h"
 
-#define N_BINS 500
+#ifdef TRACE_STEP_TIMES
+#include "stopwatch.h"
+#endif
 
 void histogram_calc(unsigned int *hist, float *lum, size_t img_size)
 {
     #pragma omp single
     {
-        if(NULL == hist)
-        {
-            Throw(UNALLOCATED_MEMORY);
-        }
-        if(NULL == lum)
-        {
-            Throw(UNALLOCATED_MEMORY);
-        }
+        check_pointer(hist);
+        check_pointer(lum);
     }
 
     #pragma omp for
@@ -39,25 +37,64 @@ void histogram_calc(unsigned int *hist, float *lum, size_t img_size)
 
 void cdf_calc(unsigned int *cdf, unsigned int *buf, size_t buf_size)
 {
-    if(NULL == cdf)
+    #pragma omp single
     {
-        Throw(UNALLOCATED_MEMORY);
-    }
-    if(NULL == buf)
-    {
-        Throw(UNALLOCATED_MEMORY);
+        check_pointer(cdf);
+        check_pointer(buf);
     }
 
+#ifdef _OPENMP
+    // If the openmp version is compiled, apply the more inefficient
+    // but fast parallel scan algorithm
+#ifdef BETTER_SCAN
+    #pragma omp single
+    {
+        unsigned int *backup = NULL;
+        memcpy(cdf, buf, sizeof(unsigned int) * buf_size);
+
+        backup = malloc(sizeof(unsigned int) * buf_size);
+
+        check_pointer(backup);
+
+        for(unsigned int stride = 1; stride < buf_size; stride *= 2)
+        {
+            memcpy(backup, cdf, (sizeof(unsigned int) * buf_size) - (sizeof(unsigned int) * stride));
+
+            #pragma omp parallel for
+            for(int index = stride; index < buf_size; index++)
+            {
+                cdf[index] += backup[index - stride];
+            }
+        }
+
+        free(backup);
+    }
+#else
+    #pragma omp single
+    {
+        cdf[0] = buf[0];
+        for(unsigned int index = 1; index < buf_size; index++)
+        {
+            cdf[index] = cdf[index - 1] + buf[index];
+        }
+    }
+#endif // BETTER_SCAN
+#else
     cdf[0] = buf[0];
     for(unsigned int index = 1; index < buf_size; index++)
     {
         cdf[index] = cdf[index - 1] + buf[index];
     }
+#endif // _OPENMP
 }
 
 int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **output)
 {
     CEXCEPTION_T e = NO_ERROR;
+
+#ifdef TRACE_STEP_TIMES
+    stopwatch_t stopwatch;
+#endif
 
     hsl_image_t hsl_image = {
         .h = NULL,
@@ -70,38 +107,29 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
     float *cdf_norm = NULL;
 
     Try {
-        if(NULL == input)
-        {
-            Throw(UNALLOCATED_MEMORY);
-        }
-
-        if(NULL == output)
-        {
-            Throw(UNALLOCATED_MEMORY);
-        }
+        check_pointer(input);
+        check_pointer(output);
 
         hsl_image.h = calloc(width * height, sizeof(int));
         hsl_image.s = calloc(width * height, sizeof(float));
         hsl_image.l = calloc(width * height, sizeof(float));
 
-        if(NULL == hsl_image.h)
-        {
-            Throw(UNALLOCATED_MEMORY);
-        }
-
-        if(NULL == hsl_image.s)
-        {
-            Throw(UNALLOCATED_MEMORY);
-        }
-
-        if(NULL == hsl_image.l)
-        {
-            Throw(UNALLOCATED_MEMORY);
-        }
+        check_pointer(hsl_image.h);
+        check_pointer(hsl_image.s);
+        check_pointer(hsl_image.l);
 
         #pragma omp parallel \
+            num_threads(arguments.threads) \
             shared(input, hsl_image, histogram, cdf, cdf_norm, output, height, width)
         {
+            // **************************************
+            // STEP 1 - convert every pixel from RGB to HSL
+#ifdef TRACE_STEP_TIMES
+            #pragma omp single
+            {
+                stopwatch_start(&stopwatch);
+            }
+#endif
             // **************************************
             // STEP 1 - convert every pixel from RGB to HSL
             #pragma omp for collapse(2)
@@ -109,13 +137,7 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
             {
                 for(unsigned int y = 0; y < width; y++)
                 {
-                    uint8_t *pixel_offset = input + (((width * x) + y) * 3);
-
-                    rgb_pixel_t rgb_pixel = {
-                        .r = pixel_offset[0],
-                        .g = pixel_offset[1],
-                        .b = pixel_offset[2]
-                    };
+                    rgb_pixel_t rgb_pixel = *(rgb_pixel_t *)(input + (((width * x) + y) * 4));
 
                     hsl_pixel_t hsl_pixel = { .h = 0, .s = 0, .l = 0 };
 
@@ -127,6 +149,21 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
                 }
             }
 
+#ifdef TRACE_STEP_TIMES
+            #pragma omp single
+            {
+                stopwatch_stop(&stopwatch);
+
+                struct timespec elapsed = stopwatch_get_elapsed(&stopwatch);
+
+                log_info("Step 1 time: %ld.%09ld",
+                    elapsed.tv_sec,
+                    elapsed.tv_nsec);
+                
+                stopwatch_start(&stopwatch);
+            }
+#endif
+
             // **************************************
             // STEP 2 - compute the histogram of the luminance for each pixel
             #pragma omp single
@@ -134,15 +171,27 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
                 // Calculate the histogram by multiplying the luminance by N_BINS - 1
                 histogram = calloc(N_BINS, sizeof(unsigned int));
 
-                if(NULL == histogram)
-                {
-                    Throw(UNALLOCATED_MEMORY);
-                }
+                check_pointer(histogram);
 
                 log_info("Starting histogram calculation..");
             }
 
             histogram_calc(histogram, hsl_image.l, width * height);
+
+#ifdef TRACE_STEP_TIMES
+            #pragma omp single
+            {
+                stopwatch_stop(&stopwatch);
+
+                struct timespec elapsed = stopwatch_get_elapsed(&stopwatch);
+
+                log_info("Step 2 time: %ld.%09ld",
+                    elapsed.tv_sec,
+                    elapsed.tv_nsec);
+                
+                stopwatch_start(&stopwatch);
+            }
+#endif
 
             // **************************************
             // STEP 3 - compute the cumulative distribution function
@@ -151,32 +200,60 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
                 // Calculate the cdf
                 cdf = calloc(N_BINS, sizeof(unsigned int));
 
-                if(NULL == cdf)
-                {
-                    Throw(UNALLOCATED_MEMORY);
-                }
+                check_pointer(cdf);
 
                 log_info("Starting cdf calculation..");
-                cdf_calc(cdf, histogram, N_BINS);
+            }
 
+            cdf_calc(cdf, histogram, N_BINS);
+
+#ifdef TRACE_STEP_TIMES
+            #pragma omp single
+            {
+                stopwatch_stop(&stopwatch);
+
+                struct timespec elapsed = stopwatch_get_elapsed(&stopwatch);
+
+                log_info("Step 3 time: %ld.%09ld",
+                    elapsed.tv_sec,
+                    elapsed.tv_nsec);
+                
+                stopwatch_start(&stopwatch);
+            }
+#endif
+
+            // **************************************
+            // STEP 4 - compute the normalized cumulative distribution function
+            #pragma omp single
+            {
                 // Normalize the cdf so that it can be used as luminance
                 cdf_norm = calloc(N_BINS, sizeof(float));
 
-                if(NULL == cdf_norm)
-                {
-                    Throw(UNALLOCATED_MEMORY);
-                }
+                check_pointer(cdf_norm);
 
                 log_info("Starting normalized cdf calculation..");
             }
 
-            // **************************************
-            // STEP 4 - compute the normalized cumulative distribution function
             #pragma omp for
             for(unsigned int bin = 0; bin < N_BINS; bin++)
             {
                 cdf_norm[bin] = (float)(cdf[bin] - cdf[0]) / ((width * height) - cdf[0]) * (N_BINS - 1);
             }
+
+#ifdef TRACE_STEP_TIMES
+            #pragma omp single
+            {
+                stopwatch_stop(&stopwatch);
+
+                struct timespec elapsed = stopwatch_get_elapsed(&stopwatch);
+
+                log_info("Step 4 time: %ld.%09ld",
+                    elapsed.tv_sec,
+                    elapsed.tv_nsec);
+                
+                stopwatch_start(&stopwatch);
+            }
+#endif
 
             // **************************************
             // STEP 5 - apply the normalized CDF to the luminance for each pixel
@@ -190,15 +267,27 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
                 }
             }
 
+#ifdef TRACE_STEP_TIMES
+            #pragma omp single
+            {
+                stopwatch_stop(&stopwatch);
+
+                struct timespec elapsed = stopwatch_get_elapsed(&stopwatch);
+
+                log_info("Step 5 time: %ld.%09ld",
+                    elapsed.tv_sec,
+                    elapsed.tv_nsec);
+                
+                stopwatch_start(&stopwatch);
+            }
+#endif
+
             #pragma omp single
             {
                 // Convert back to rgb and save the image
-                *output = calloc(width * height * 3, sizeof(uint8_t));
-                
-                if(NULL == (*output))
-                {
-                    Throw(UNALLOCATED_MEMORY);
-                }
+                *output = calloc(width * height * 4, sizeof(uint8_t));
+
+                check_pointer(*output);
             }
 
             // **************************************
@@ -208,9 +297,9 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
             {
                 for(unsigned int y = 0; y < width; y++)
                 {
-                    uint8_t *pixel_offset = (*output) + (((width * x) + y) * 3);
+                    uint8_t *pixel_offset = (*output) + (((width * x) + y) * 4);
 
-                    rgb_pixel_t rgb_pixel = { .r = 0, .g = 0, .b = 0 };
+                    rgb_pixel_t rgb_pixel = { .r = 0, .g = 0, .b = 0, .a = 0xFF };
 
                     hsl_pixel_t hsl_pixel = {
                         .h = hsl_image.h[(width * x) + y],
@@ -220,13 +309,25 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
 
                     hsl_to_rgb(hsl_pixel, &rgb_pixel);
 
-                    pixel_offset[0] = rgb_pixel.r;
-                    pixel_offset[1] = rgb_pixel.g;
-                    pixel_offset[2] = rgb_pixel.b;
+                    memcpy(pixel_offset, &rgb_pixel, sizeof(rgb_pixel_t));
                 }
             }
-        }
 
+#ifdef TRACE_STEP_TIMES
+            #pragma omp single
+            {
+                stopwatch_stop(&stopwatch);
+
+                struct timespec elapsed = stopwatch_get_elapsed(&stopwatch);
+
+                log_info("Step 6 time: %ld.%09ld",
+                    elapsed.tv_sec,
+                    elapsed.tv_nsec);
+                
+                stopwatch_start(&stopwatch);
+            }
+#endif
+        }
 
         if(arguments.log_histogram)
         {
@@ -253,10 +354,8 @@ int equalize(uint8_t *input, unsigned int width, unsigned int height, uint8_t **
         {
             // Compute the post processed image histogram
             unsigned int *pp_histogram = calloc(N_BINS, sizeof(unsigned int));
-            if(NULL == pp_histogram)
-            {
-                Throw(UNALLOCATED_MEMORY);
-            }
+
+            check_pointer(pp_histogram);
 
             log_info("Starting post processed histogram calculation..");
             histogram_calc(pp_histogram, hsl_image.l, width * height);
