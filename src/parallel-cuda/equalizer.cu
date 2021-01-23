@@ -153,7 +153,11 @@ int equalize(rgb_pixel_t *input, unsigned int width, unsigned int height, uint8_
         .l = NULL
     };
 
+    
+
     Try {
+        
+
         // Allocate memory for the image on the device
         gpuErrorCheck( cudaMalloc((void**)&d_rgb_image, width * height * sizeof(rgb_pixel_t)) );
         gpuErrorCheck( cudaMemcpy(d_rgb_image, input, width * height * sizeof(rgb_pixel_t), cudaMemcpyHostToDevice) );

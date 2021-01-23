@@ -19,6 +19,7 @@ extern "C" {
 
 #include "hsl.cuh"
 #include "equalizer.cuh"
+#include "error_checker.cuh"
 
 struct arguments arguments;
 
@@ -36,8 +37,13 @@ int main(int argc, char **argv)
     stopwatch_t processing_sw;
     stopwatch_t total_sw;
     CEXCEPTION_T e;
-
+    uint8_t *tmp;
+ 
     Try {
+        // This calls are useful to improve the runtime load time
+        gpuErrorCheck( cudaMalloc(&tmp, 0) );
+        gpuErrorCheck( cudaFree(tmp) );
+
         set_default_arguments(&arguments);
 
         argp_parse(&argp, argc, argv, 0, 0, &arguments);
