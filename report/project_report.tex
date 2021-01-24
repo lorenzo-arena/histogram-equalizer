@@ -82,12 +82,12 @@ of all the probabilities lying in its domain:
 To get a linearized \(cdf\), which will produce a flatten histogram, we must
 normalize the is to the \([0, L - 1]\) range by using the following formula:
 
-\[ cdfn_x(i) = \frac{cdf(i) - cdf_{min}}{(M * N) - cdf_{min}} \]
+\[ cdfn_x(i) = \frac{cdf(i) - cdf_{min}}{(M \cdot N) - cdf_{min}} \]
 
 where \(M\) and \(N\) are the image's dimensions. The normalized \(cdf\) must
 then be applied to the original histgram:
 
-\[ h(v) = round(cdfn_x(i) * (L - 1)) \]
+\[ h(v) = round(cdfn_x(i) \cdot (L - 1)) \]
 
 While this can be applied to grayscale images by using the pixel value, for
 color images applying the equalization process to the R, G and B channels would
@@ -194,6 +194,49 @@ be potentially houndreds of threads writing to the same memory locations (that i
 incrementing a "bin"), \emph{atomic} operations like \verb|atomicAdd| has been used; each
 thread \emph{block} also works on a separate piece of memory, reducing the risk of collisions.
 After some tests it has been chosen to use 30 \emph{blocks} of 512 threads each.
+When the first implementation was completed it was noticed that one of the biggest bottlenecks
+was the time necessary for the first \verb|cudaMalloc| call, which would take a lot of time
+while the following CUDA function calls would take a lot less; it was probably relative to
+the initialization of the runtime, and adding a simple \verb|cudaMalloc| and \verb|cudaFree|
+for a 0 bytes array call at the start of the program contributed to trim that time.
+Tables \ref{tbl:cuda-speedup-1} and \ref{tbl:cuda-speedup-2} reports the speedup of the
+CUDA implementation for two images of different dimensions.
+
+\begin{table}
+    \begin{center}
+    \begin{tabular}{|l|c|c|}
+    \hline
+    \multicolumn{3}{|c|}{Results for a 6MP image} \\
+    \hline
+    Implementation & Computation times & Speedup \\
+    \hline
+    Sequential: & 746ms & 1 \\
+    OpenMP: & 114ms & 6.54 \\
+    CUDA: & 25ms & 29.84 \\
+    \hline
+    \end{tabular}
+    \end{center}
+    \caption{CUDA results for 6MP image.}
+    \label{tbl:cuda-speedup-1}
+\end{table}
+
+\begin{table}
+    \begin{center}
+    \begin{tabular}{|l|c|c|}
+    \hline
+    \multicolumn{3}{|c|}{Results for a 20MP image} \\
+    \hline
+    Implementation & Computation times & Speedup \\
+    \hline
+    Sequential: & 2386ms & 1 \\
+    OpenMP: & 286ms & 8.34 \\
+    CUDA: & 75ms & 31.81 \\
+    \hline
+    \end{tabular}
+    \end{center}
+    \caption{CUDA results for 20MP image.}
+    \label{tbl:cuda-speedup-2}
+\end{table}
 
 \section{Results}
 
@@ -206,10 +249,10 @@ the correctness of the different solutions and to run them with different thread
           however, that stops getting better when the thread count is above the core count on
           which it is executed (or the virtual thread count in case of \emph{Simultaneous
           multithreading} enabled CPUs)
-    \item for small images (under 6MP) the CUDA implementation provides a lot more speedup
-          than the OpenMP solution run at the most efficient thread count; however, when images
-          get bigger, the overhead due to the data transfer from the host the device and
-          viceversa slightly dimish that speedup (while being still really good)
+    \item for small images (under 6MP) both the OpenMP and the CUDA implementations provide a
+          good speedup; however with bigger images the amount of parallelized computations grows
+          while the not parallelized or not efficient (i.e. the scan computation) remains the same.
+          This gets translated is an even higher speedup over the sequential implementation.
 \end{itemize}
 
 \newpage
