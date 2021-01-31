@@ -142,7 +142,7 @@ int equalize(rgb_pixel_t *input, unsigned int width, unsigned int height, uint8_
     CEXCEPTION_T e = NO_ERROR;
 
     int blocksPerGrid = 0;
-    const int nStreams = 8;
+    const int nStreams = 100;
     cudaStream_t streams[nStreams];
     const int streamSize = ((width * height) + nStreams - 1) / nStreams;
 
@@ -159,15 +159,14 @@ int equalize(rgb_pixel_t *input, unsigned int width, unsigned int height, uint8_
     };
 
     Try {
-        for (int i = 0; i < nStreams; ++i)
+        for (int i = 0; i < nStreams; i++)
         {
-            checkCuda( cudaStreamCreate(&stream[i]) );
+            gpuErrorCheck( cudaStreamCreate(&streams[i]) );
         }
 
-        gpuErrorCheck( cudaMallocHost((void**)&h_rgb_image, width * height * sizeof(rgb_pixel_t)) );      // host pinned
+        gpuErrorCheck( cudaMallocHost((void**)&h_rgb_image, width * height * sizeof(rgb_pixel_t)) );
         gpuErrorCheck( cudaMalloc((void**)&d_rgb_image, width * height * sizeof(rgb_pixel_t)) );
         memcpy(h_rgb_image, input, width * height * sizeof(rgb_pixel_t));
-       // gpuErrorCheck( cudaMemcpy(d_rgb_image, input, width * height * sizeof(rgb_pixel_t), cudaMemcpyHostToDevice) );
 
         gpuErrorCheck( cudaMalloc((void**)&(d_hsl_image.h), width * height * sizeof(int)) );
         gpuErrorCheck( cudaMalloc((void**)&(d_hsl_image.s), width * height * sizeof(float)) );
@@ -184,20 +183,27 @@ int equalize(rgb_pixel_t *input, unsigned int width, unsigned int height, uint8_
 
         // **************************************
         // STEP 1 - convert every pixel from RGB to HSL
-        for (int i = 0; i < nStreams; ++i)
+        for (int i = 0; i < nStreams; i++)
         {
             int offset = i * streamSize;
-            if(offset < (width * height))
+            int size = streamSize;
+
+            if(i == (nStreams - 1))
             {
-                int size = ((offset + streamSize) < (width * height)) ? streamSize : ((offset + streamSize) - (width * height));
-
-                gpuErrorCheck( cudaMemcpyAsync(&d_rgb_image[offset], &h_rgb_image[offset], 
-                                               size * sizeof(rgb_pixel_t), cudaMemcpyHostToDevice, 
-                                               stream[i]) );
-
-                blocksPerGrid = ((size) + BLOCK_SIZE - 1) / BLOCK_SIZE;
-                convert_rgb_to_hsl<<<blocksPerGrid, BLOCK_SIZE>>>(d_rgb_image, d_hsl_image, size, offset);
+                size = (width * height) - (offset);
             }
+
+            gpuErrorCheck( cudaMemcpyAsync(&d_rgb_image[offset], &h_rgb_image[offset], 
+                                            size * sizeof(rgb_pixel_t), cudaMemcpyHostToDevice, 
+                                            streams[i]) );
+
+            blocksPerGrid = ((size) + BLOCK_SIZE - 1) / BLOCK_SIZE;
+            convert_rgb_to_hsl<<<blocksPerGrid, BLOCK_SIZE, 0, streams[i]>>>(d_rgb_image, d_hsl_image, size, offset);
+        }
+
+        for (int i = 0; i < nStreams; i++)
+        {
+            cudaStreamSynchronize(streams[i]);
         }
 
         // **************************************
@@ -223,24 +229,31 @@ int equalize(rgb_pixel_t *input, unsigned int width, unsigned int height, uint8_
 
         // **************************************
         // STEP 6 - convert each HSL pixel back to RGB
-        for (int i = 0; i < nStreams; ++i)
+        for (int i = 0; i < nStreams; i++)
         {
             int offset = i * streamSize;
-            if(offset < (width * height))
+            int size = streamSize;
+
+            if(i == (nStreams - 1))
             {
-                int size = ((offset + streamSize) < (width * height)) ? streamSize : ((offset + streamSize) - (width * height));
-
-                blocksPerGrid = ((size) + BLOCK_SIZE - 1) / BLOCK_SIZE;
-                convert_hsl_to_rgb<<<blocksPerGrid, BLOCK_SIZE>>>(d_hsl_image, d_rgb_image, size, offset);
-
-                gpuErrorCheck( cudaMemcpyAsync(&h_rgb_image[offset], &d_rgb_image[offset], 
-                                               size * sizeof(rgb_pixel_t), cudaMemcpyDeviceToHost, 
-                                               stream[i]) );
+                size = (width * height) - (offset);
             }
+
+            blocksPerGrid = ((size) + BLOCK_SIZE - 1) / BLOCK_SIZE;
+            convert_hsl_to_rgb<<<blocksPerGrid, BLOCK_SIZE, 0, streams[i]>>>(d_hsl_image, d_rgb_image, size, offset);
+
+            gpuErrorCheck( cudaMemcpyAsync(&h_rgb_image[offset], &d_rgb_image[offset], 
+                                           size * sizeof(rgb_pixel_t), cudaMemcpyDeviceToHost, 
+                                           streams[i]) );
+        }
+
+        for (int i = 0; i < nStreams; i++)
+        {
+            cudaStreamSynchronize(streams[i]);
         }
 
         // Copy the result back from the device
-        memcpy(output, h_rgb_image, width * height * sizeof(rgb_pixel_t));
+        memcpy(*output, h_rgb_image, width * height * sizeof(rgb_pixel_t));
 
         if(arguments.log_histogram)
         {
@@ -284,8 +297,9 @@ int equalize(rgb_pixel_t *input, unsigned int width, unsigned int height, uint8_
         }
     } Catch(e) {
         log_error("Caught exception %d while equalizing image!", e);
-    }
+    }    
 
+    cudaFreeHost(h_rgb_image);
     cudaFree(d_rgb_image);
     cudaFree(d_histogram);
     cudaFree(d_cdf);
@@ -294,9 +308,9 @@ int equalize(rgb_pixel_t *input, unsigned int width, unsigned int height, uint8_
     cudaFree(d_hsl_image.s);
     cudaFree(d_hsl_image.l);
 
-    for (int i = 0; i < nStreams; ++i)
+    for (int i = 0; i < nStreams; i++)
     {
-        checkCuda( cudaStreamDestroy(&stream[i]) );
+        gpuErrorCheck( cudaStreamDestroy(streams[i]) );
     }
 
     return e;
